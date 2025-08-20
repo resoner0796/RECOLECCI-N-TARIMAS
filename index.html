@@ -14,7 +14,7 @@
     ul { padding-left: 15px; }
     li { margin-bottom: 10px; background: #f8f9fa; padding: 8px; border-radius: 6px; font-size: 14px; }
     small { color: #555; }
-    #preview { width: 100%; max-height: 200px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; display:none; }
+    #preview { width: 100%; max-height: 220px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; display:none; }
     @media (max-width: 600px) {
       .card { margin: 10px; padding: 15px; max-width: 100%; }
       input, button { font-size: 14px; padding: 10px; }
@@ -31,7 +31,6 @@
   <video id="preview"></video>
 
 <script>
-  // 🔹 Configuración Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyCPTEu73s2rVIm2VsdTk59kVIOyi1jeyu8",
     authDomain: "panel-logistica.firebaseapp.com",
@@ -50,11 +49,10 @@
   let currentTarima = null;
   let codeReader = null;
   let scanning = false;
+  let modo = ""; // "empleado" o "caja"
 
-  // Detectar móvil
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-  // Pantalla inicial
   function mostrarPantallaRecoleccion() {
     const contenedor = document.getElementById("pantalla5");
     contenedor.innerHTML = `
@@ -62,7 +60,7 @@
         <h2>Recolección</h2>
         <p>Escanee su número de empleado:</p>
         <input type="text" id="empleadoInput" placeholder="Escanear gafete">
-        ${isMobile ? `<button id="btnIniciarEscaneoEmpleado">📷 Escanear</button>` : ""}
+        ${isMobile ? `<button id="btnEscEmpleado">📷 Iniciar escaneo</button>` : ""}
         <button id="btnEmpleadoSiguiente" disabled>➡️ Siguiente</button>
       </div>
     `;
@@ -77,40 +75,48 @@
       }
     });
 
-    const btnSiguiente = document.getElementById("btnEmpleadoSiguiente");
-    if (btnSiguiente) {
-      btnSiguiente.addEventListener("click", () => {
-        mostrarPantallaCrearTarima();
+    if (isMobile) {
+      document.getElementById("btnEscEmpleado").addEventListener("click", () => {
+        if (!scanning) iniciarEscaneo("empleado");
+        else detenerCamara();
       });
     }
 
-    const btnEscanearEmpleado = document.getElementById("btnIniciarEscaneoEmpleado");
-    if (btnEscanearEmpleado) {
-      btnEscanearEmpleado.addEventListener("click", iniciarEscaneoEmpleado);
-    }
+    document.getElementById("btnEmpleadoSiguiente").addEventListener("click", () => {
+      mostrarPantallaCrearTarima();
+    });
   }
 
-  // Escaneo de empleado con cámara
-  async function iniciarEscaneoEmpleado() {
-    if (scanning) return;
+  function iniciarEscaneo(tipo) {
+    modo = tipo;
     scanning = true;
     const preview = document.getElementById("preview");
     preview.style.display = "block";
     codeReader = new ZXing.BrowserBarcodeReader();
-    try {
-      const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview');
-      empleadoActual = result.text.trim();
-      document.getElementById("empleadoInput").value = empleadoActual;
-      document.getElementById("btnEmpleadoSiguiente").disabled = false;
-      alert("Empleado capturado: " + empleadoActual);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      detenerCamara();
-    }
+
+    codeReader.decodeFromVideoDevice(undefined, 'preview', (result, err) => {
+      if (result) {
+        if (modo === "empleado") {
+          empleadoActual = result.text.trim();
+          document.getElementById("empleadoInput").value = empleadoActual;
+          document.getElementById("btnEmpleadoSiguiente").disabled = false;
+          alert("Empleado capturado: " + empleadoActual);
+          detenerCamara(); // Se cierra tras 1 escaneo
+        } else if (modo === "caja") {
+          procesarEscaneo(result.text.trim(), currentTarima);
+        }
+      }
+    });
   }
 
-  // Crear tarima
+  function detenerCamara() {
+    if (codeReader) {
+      codeReader.reset();
+    }
+    document.getElementById("preview").style.display = "none";
+    scanning = false;
+  }
+
   function mostrarPantallaCrearTarima() {
     const contenedor = document.getElementById("pantalla5");
     contenedor.innerHTML = `
@@ -140,15 +146,14 @@
     });
   }
 
-  // Formulario tarima
   function mostrarFormularioTarima(idTarima) {
     const contenedor = document.getElementById("tarimaContainer");
     contenedor.innerHTML = `
       <div class="card">
         <h3>Tarima: ${idTarima}</h3>
-        <p><b>Flujo de escaneo:</b> 1) BX → 2) Material → 3) Cantidad</p>
+        <p><b>Flujo:</b> 1) BX → 2) Material → 3) Cantidad</p>
         <input type="text" id="codigoCaja" placeholder="Escanear código">
-        ${isMobile ? `<button id="btnIniciarEscaneoCaja">📷 Escanear</button>` : ""}
+        ${isMobile ? `<button id="btnEscCaja">📷 Iniciar escaneo</button>` : ""}
         <h4>Resumen</h4>
         <div id="resumenTarima">Órdenes: 0 | Cajas: 0 | Piezas: 0</div>
         <h4>Cajas registradas</h4>
@@ -156,29 +161,15 @@
         <button onclick="terminarRegistroTarima('${idTarima}')">✅ Terminar Registro</button>
       </div>
     `;
+
+    if (isMobile) {
+      document.getElementById("btnEscCaja").addEventListener("click", () => {
+        if (!scanning) iniciarEscaneo("caja");
+        else detenerCamara();
+      });
+    }
+
     configurarEscaneo(idTarima);
-    const btnEscanearCaja = document.getElementById("btnIniciarEscaneoCaja");
-    if (btnEscanearCaja) {
-      btnEscanearCaja.addEventListener("click", iniciarEscaneoCaja);
-    }
-  }
-
-  // Escaneo de cajas con cámara
-  async function iniciarEscaneoCaja() {
-    if (scanning) return;
-    scanning = true;
-    const preview = document.getElementById("preview");
-    preview.style.display = "block";
-    codeReader = new ZXing.BrowserBarcodeReader();
-
-    try {
-      const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview');
-      procesarEscaneo(result.text.trim(), currentTarima);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      detenerCamara();
-    }
   }
 
   function procesarEscaneo(valor, idTarima) {
@@ -194,32 +185,19 @@
       estadoEscaneo = 2;
       alert("✅ Material capturado: " + cajaTemp.numeroMaterial);
     } else if (estadoEscaneo === 2) {
-      // ⚠️ VALIDACIÓN AGREGADA AQUÍ ⚠️
-      const cantidad = parseInt(valor);
-      if (isNaN(cantidad)) {
-          alert("❌ Error: La cantidad escaneada no es un número válido.");
-          return;
-      }
-      cajaTemp.cantidadPiezas = cantidad;
+      cajaTemp.cantidadPiezas = parseInt(valor);
       cajaTemp.timestamp = new Date().toISOString();
       const cajaId = db.ref(`tarimas/${idTarima}/cajas`).push().key;
-
-      // ⚠️ MEJORA DE ASINCRONÍA APLICADA AQUÍ ⚠️
-      db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp)
-          .then(() => {
-              alert("📦 Caja guardada correctamente");
-              actualizarResumenTarima(idTarima);
-              estadoEscaneo = 0;
-              cajaTemp = {};
-          })
-          .catch((error) => {
-              console.error("Error al guardar la caja:", error);
-              alert("❌ Error al guardar la caja. Intente de nuevo.");
-          });
+      db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp).then(() => {
+        actualizarResumenTarima(idTarima);
+      });
+      alert("📦 Caja guardada correctamente");
+      estadoEscaneo = 0;
+      cajaTemp = {};
+      if (modo === "caja") detenerCamara(); // cierra cámara al terminar flujo
     }
   }
 
-  // Escaneo manual (con Enter)
   function configurarEscaneo(idTarima) {
     const input = document.getElementById("codigoCaja");
     input.addEventListener("keypress", function(e) {
@@ -230,7 +208,6 @@
     });
   }
 
-  // Agrupamiento expandible
   function actualizarResumenTarima(idTarima) {
     db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
       let resumenPorOrden = {};
@@ -238,26 +215,22 @@
 
       snapshot.forEach(child => {
         const c = child.val();
-        if (!resumenPorOrden["ORD-" + c.numeroOrden]) {
-          resumenPorOrden["ORD-" + c.numeroOrden] = {
+        if (!resumenPorOrden[c.numeroOrden]) {
+          resumenPorOrden[c.numeroOrden] = {
             material: c.numeroMaterial,
             totalPiezas: 0,
             cajas: []
           };
         }
-        resumenPorOrden["ORD-" + c.numeroOrden].totalPiezas += c.cantidadPiezas || 0;
-        resumenPorOrden["ORD-" + c.numeroOrden].cajas.push(c.codigoCaja);
+        resumenPorOrden[c.numeroOrden].totalPiezas += c.cantidadPiezas || 0;
+        resumenPorOrden[c.numeroOrden].cajas.push(c.codigoCaja);
       });
-
-      let totalOrdenes = Object.keys(resumenPorOrden).length;
-      let totalCajas = snapshot.numChildren();
-      let totalPiezas = Object.values(resumenPorOrden).reduce((a, b) => a + b.totalPiezas, 0);
 
       for (let orden in resumenPorOrden) {
         const datos = resumenPorOrden[orden];
         lista += `
           <li>
-            Orden: ${orden.replace("ORD-", "")} | Material: ${datos.material} | Piezas: ${datos.totalPiezas}
+            Orden: ${orden} | Material: ${datos.material} | Piezas: ${datos.totalPiezas}
             <button onclick="toggleCajas('${orden}')">Ver cajas</button>
             <ul id="cajas-${orden}" style="display:none;">
               ${datos.cajas.map(c => `<li>${c}</li>`).join("")}
@@ -266,7 +239,9 @@
       }
 
       document.getElementById("resumenTarima").innerText =
-        `Órdenes: ${totalOrdenes} | Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
+        `Órdenes: ${Object.keys(resumenPorOrden).length} | Cajas: ${snapshot.numChildren()} | Piezas: ${
+          Object.values(resumenPorOrden).reduce((a,b) => a + b.totalPiezas, 0)
+        }`;
       document.getElementById("listaCajas").innerHTML = lista;
     });
   }
@@ -280,15 +255,6 @@
     alert("Registro finalizado para tarima " + idTarima);
   }
 
-  function detenerCamara() {
-    if (codeReader) {
-      codeReader.reset();
-    }
-    document.getElementById("preview").style.display = "none";
-    scanning = false;
-  }
-
-  // Iniciar
   mostrarPantallaRecoleccion();
 </script>
 </body>
