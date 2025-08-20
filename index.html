@@ -270,7 +270,6 @@
       </div>
     `;
 
-    // Cargar el resumen del turno en tiempo real
     actualizarResumenTurno();
   }
 
@@ -348,18 +347,31 @@
 
   function crearNuevaTarima() {
     const turno = determinarTurno();
-    const nuevaTarimaRef = db.ref("tarimas").push();
-    const idTarima = nuevaTarimaRef.key;
-    currentTarima = idTarima;
+    db.ref("tarimas").orderByChild("id").limitToLast(1).once("value").then(snapshot => {
+      let lastIdNumber = 0;
+      if (snapshot.exists()) {
+        const lastTarima = Object.values(snapshot.val())[0];
+        const lastId = lastTarima.id;
+        const numberPart = lastId.split('-')[1];
+        lastIdNumber = parseInt(numberPart, 10);
+      }
 
-    nuevaTarimaRef.set({
-      id: idTarima,
-      empleadoId: empleadoActual,
-      fechaCreacion: new Date().toISOString(),
-      turno: turno,
-      cajas: {}
-    }).then(() => {
-      mostrarFormularioTarima(idTarima);
+      const nextIdNumber = lastIdNumber + 1;
+      const idTarima = "TAR-" + String(nextIdNumber).padStart(3, '0');
+      currentTarima = idTarima;
+
+      db.ref("tarimas/" + idTarima).set({
+        id: idTarima,
+        empleadoId: empleadoActual,
+        fechaCreacion: new Date().toISOString(),
+        turno: turno,
+        cajas: {}
+      }).then(() => {
+        mostrarFormularioTarima(idTarima);
+      }).catch(error => {
+        console.error("Error al crear la tarima:", error);
+        updateStatus("❌ Error al crear la tarima. Intente de nuevo.", 'error');
+      });
     });
   }
 
@@ -486,7 +498,7 @@
       
       snapshot.forEach(cajaSnapshot => {
         const caja = cajaSnapshot.val();
-        const cajaId = cajaSnapshot.key; // Obtén el ID de la caja
+        const cajaId = cajaSnapshot.key;
         totalCajas++;
         totalPiezas += caja.cantidadPiezas || 0;
         
@@ -509,7 +521,6 @@
       db.ref(`tarimas/${idTarima}/cajas/${idCaja}`).remove()
         .then(() => {
           updateStatus("Caja eliminada correctamente.", 'success');
-          // Actualiza la lista para reflejar el cambio
           actualizarResumenTarima(idTarima);
         })
         .catch(error => {
