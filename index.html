@@ -47,14 +47,28 @@
       font-size: 16px;
       border-radius: 10px;
       border: none;
-      background-color: #007AFF;
-      color: #FFFFFF;
       width: 100%;
       font-weight: bold;
       transition: background-color 0.3s ease;
     }
+    button.btn-primary { 
+        background-color: #007AFF;
+        color: #FFFFFF;
+    }
+    button.btn-green { 
+        background-color: #4CAF50;
+        color: #FFFFFF;
+    }
+    button.btn-orange { 
+        background-color: #ffc107;
+        color: #000000;
+    }
+    button.btn-secondary {
+        background-color: #6c757d;
+        color: #FFFFFF;
+    }
     button:active {
-      background-color: #0056b3;
+      filter: brightness(0.9);
     }
     h2, h3, h4 { margin: 10px 0; }
     ul { padding-left: 0; list-style: none; }
@@ -77,6 +91,13 @@
     .status-success { background-color: #34c759; color: #FFFFFF; }
     .status-info { background-color: #5ac8fa; color: #FFFFFF; }
     .status-error { background-color: #ff3b30; color: #FFFFFF; }
+    
+    .list-item-btn {
+        width: auto;
+        padding: 5px 10px;
+        margin: 0;
+        float: right;
+    }
 
     /* Estilos del modal y el marco de escaneo */
     #scannerModal {
@@ -191,7 +212,7 @@
         <p>Escanee su número de empleado:</p>
         <div id="statusMessage"></div>
         <input type="text" id="empleadoInput" placeholder="Escanear gafete">
-        ${isMobile ? `<button id="btnEscEmpleado">📷 Iniciar escaneo</button>` : ""}
+        ${isMobile ? `<button id="btnEscEmpleado" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
       </div>
     `;
 
@@ -201,7 +222,7 @@
         empleadoActual = input.value.trim();
         input.value = "";
         updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
-        setTimeout(() => mostrarPantallaCrearTarima(), 1500);
+        setTimeout(() => mostrarPantallaPrincipal(), 1500);
       }
     });
 
@@ -210,6 +231,19 @@
         iniciarEscaneo("empleado");
       });
     }
+  }
+  
+  function mostrarPantallaPrincipal() {
+    const contenedor = document.getElementById("pantalla5");
+    contenedor.innerHTML = `
+      <div class="card">
+        <h2>📦 Recolección</h2>
+        <h3>Empleado: <b>${empleadoActual}</b></h3>
+        <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
+        <button onclick="mostrarTarimasCreadas()" class="btn-primary">📋 Ver tarimas creadas</button>
+        <div id="tarimaContainer"></div>
+      </div>
+    `;
   }
 
   async function iniciarEscaneo(tipo) {
@@ -227,7 +261,7 @@
       if (modo === "empleado") {
         empleadoActual = result.text.trim();
         updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
-        setTimeout(() => mostrarPantallaCrearTarima(), 1500);
+        setTimeout(() => mostrarPantallaPrincipal(), 1500);
       } else if (modo === "caja") {
         procesarEscaneo(result.text.trim(), currentTarima);
       }
@@ -248,18 +282,6 @@
     scanning = false;
   }
 
-  function mostrarPantallaCrearTarima() {
-    const contenedor = document.getElementById("pantalla5");
-    contenedor.innerHTML = `
-      <div class="card">
-        <h2>📦 Recolección</h2>
-        <h3>Empleado: <b>${empleadoActual}</b></h3>
-        <button onclick="crearNuevaTarima()">📦 Crear Nueva Tarima</button>
-        <div id="tarimaContainer"></div>
-      </div>
-    `;
-  }
-
   function crearNuevaTarima() {
     db.ref("tarimas").once("value").then(snapshot => {
       const total = snapshot.numChildren();
@@ -278,19 +300,19 @@
   }
 
   function mostrarFormularioTarima(idTarima) {
-    const contenedor = document.getElementById("tarimaContainer");
+    const contenedor = document.getElementById("pantalla5");
     contenedor.innerHTML = `
       <div class="card">
         <h3>Tarima: ${idTarima}</h3>
         <p><b>Paso actual:</b> <span id="pasoActual">1) BX</span></p>
         <div id="statusMessage"></div>
         <input type="text" id="codigoCaja" placeholder="Escanear o ingresar BX">
-        ${isMobile ? `<button id="btnEscCaja">📷 Iniciar escaneo</button>` : ""}
+        ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
         <h4>Resumen</h4>
         <div id="resumenTarima">Órdenes: 0 | Cajas: 0 | Piezas: 0</div>
         <h4>Cajas registradas</h4>
         <ul id="listaCajas"></ul>
-        <button onclick="terminarRegistroTarima('${idTarima}')">✅ Terminar Registro</button>
+        <button onclick="terminarRegistroTarima('${idTarima}')" class="btn-orange">✅ Terminar Registro</button>
       </div>
     `;
     updateStatus("Escanear el código de BX de la caja.", 'info');
@@ -392,7 +414,7 @@
         lista += `
           <li>
             Orden: ${orden} | Material: ${datos.material} | Piezas: ${datos.totalPiezas}
-            <button onclick="toggleCajas('${orden}')">Ver cajas</button>
+            <button onclick="toggleCajas('${orden}')" class="btn-secondary list-item-btn">Ver cajas</button>
             <ul id="cajas-${orden}" style="display:none;">
               ${datos.cajas.map(c => `<li>${c}</li>`).join("")}
             </ul>
@@ -409,8 +431,56 @@
 
   function terminarRegistroTarima(idTarima) {
       alert(`Registro finalizado para tarima ${idTarima}.`);
-      document.getElementById('tarimaContainer').innerHTML = ''; // Limpia el formulario
+      mostrarPantallaPrincipal();
       updateStatus("Listo para crear una nueva tarima.", 'info');
+  }
+
+  function mostrarTarimasCreadas() {
+    const contenedor = document.getElementById("pantalla5");
+    contenedor.innerHTML = `
+      <div class="card">
+        <h2>📋 Historial de Tarimas</h2>
+        <p>Aquí puedes ver todas las tarimas registradas.</p>
+        <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+        <div id="statusMessage"></div>
+        <ul id="listaTarimas"></ul>
+      </div>
+    `;
+
+    updateStatus("Cargando historial de tarimas...", 'info');
+    db.ref("tarimas").once("value").then(snapshot => {
+      let lista = "";
+      snapshot.forEach(tarimaSnapshot => {
+        const tarima = tarimaSnapshot.val();
+        const fecha = new Date(tarima.fechaCreacion).toLocaleString();
+        
+        let cajasHtml = "";
+        let totalCajas = 0;
+        if (tarima.cajas) {
+          totalCajas = Object.keys(tarima.cajas).length;
+          for (let key in tarima.cajas) {
+            const caja = tarima.cajas[key];
+            cajasHtml += `<li>Caja: ${caja.codigoCaja} | Material: ${caja.numeroMaterial} | Cantidad: ${caja.cantidadPiezas}</li>`;
+          }
+        }
+
+        lista += `
+          <li>
+            Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Cajas: ${totalCajas}
+            <button onclick="toggleCajas('${tarima.id}')" class="btn-secondary list-item-btn">Ver cajas</button>
+            <br><small>Creada el ${fecha}</small>
+            <ul id="cajas-${tarima.id}" style="display:none;">
+              ${cajasHtml}
+            </ul>
+          </li>
+        `;
+      });
+      document.getElementById("listaTarimas").innerHTML = lista;
+      updateStatus("Historial cargado correctamente.", 'success');
+    }).catch(error => {
+        console.error("Error al cargar las tarimas:", error);
+        updateStatus("❌ Error al cargar el historial. Intente de nuevo.", 'error');
+    });
   }
 
   mostrarPantallaRecoleccion();
