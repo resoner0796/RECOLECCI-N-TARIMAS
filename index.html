@@ -98,7 +98,7 @@
         position: relative;
         width: 90%;
         max-width: 400px;
-        aspect-ratio: 16 / 9; /* Formato horizontal para códigos de barras */
+        aspect-ratio: 16 / 9;
         border: 2px solid #007AFF;
         border-radius: 10px;
         overflow: hidden;
@@ -148,6 +148,11 @@
   </div>
 
 <script>
+  // Evitar el doble toque para hacer zoom en dispositivos móviles
+  document.addEventListener('dblclick', function(e) {
+      e.preventDefault();
+  }, { passive: false });
+
   const firebaseConfig = {
     apiKey: "AIzaSyCPTEu73s2rVIm2VsdTk59kVIOyi1jeyu8",
     authDomain: "panel-logistica.firebaseapp.com",
@@ -403,7 +408,9 @@
   }
 
   function terminarRegistroTarima(idTarima) {
-    alert("Registro finalizado para tarima " + idTarima);
+      alert(`Registro finalizado para tarima ${idTarima}.`);
+      document.getElementById('tarimaContainer').innerHTML = ''; // Limpia el formulario
+      updateStatus("Listo para crear una nueva tarima.", 'info');
   }
 
   mostrarPantallaRecoleccion();
