@@ -21,10 +21,8 @@
       li { font-size: 13px; }
     }
   </style>
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <!-- ZXing para escaneo -->
   <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
@@ -64,7 +62,7 @@
         <h2>Recolección</h2>
         <p>Escanee su número de empleado:</p>
         <input type="text" id="empleadoInput" placeholder="Escanear gafete">
-        ${isMobile ? `<button onclick="iniciarEscaneoEmpleado()">📷 Escanear</button>` : ""}
+        ${isMobile ? `<button id="btnIniciarEscaneoEmpleado">📷 Escanear</button>` : ""}
         <button id="btnEmpleadoSiguiente" disabled>➡️ Siguiente</button>
       </div>
     `;
@@ -79,9 +77,17 @@
       }
     });
 
-    document.getElementById("btnEmpleadoSiguiente").addEventListener("click", () => {
-      mostrarPantallaCrearTarima();
-    });
+    const btnSiguiente = document.getElementById("btnEmpleadoSiguiente");
+    if (btnSiguiente) {
+      btnSiguiente.addEventListener("click", () => {
+        mostrarPantallaCrearTarima();
+      });
+    }
+
+    const btnEscanearEmpleado = document.getElementById("btnIniciarEscaneoEmpleado");
+    if (btnEscanearEmpleado) {
+      btnEscanearEmpleado.addEventListener("click", iniciarEscaneoEmpleado);
+    }
   }
 
   // Escaneo de empleado con cámara
@@ -142,7 +148,7 @@
         <h3>Tarima: ${idTarima}</h3>
         <p><b>Flujo de escaneo:</b> 1) BX → 2) Material → 3) Cantidad</p>
         <input type="text" id="codigoCaja" placeholder="Escanear código">
-        ${isMobile ? `<button onclick="iniciarEscaneoCaja()">📷 Escanear</button>` : ""}
+        ${isMobile ? `<button id="btnIniciarEscaneoCaja">📷 Escanear</button>` : ""}
         <h4>Resumen</h4>
         <div id="resumenTarima">Órdenes: 0 | Cajas: 0 | Piezas: 0</div>
         <h4>Cajas registradas</h4>
@@ -151,6 +157,10 @@
       </div>
     `;
     configurarEscaneo(idTarima);
+    const btnEscanearCaja = document.getElementById("btnIniciarEscaneoCaja");
+    if (btnEscanearCaja) {
+      btnEscanearCaja.addEventListener("click", iniciarEscaneoCaja);
+    }
   }
 
   // Escaneo de cajas con cámara
@@ -215,19 +225,23 @@
 
       snapshot.forEach(child => {
         const c = child.val();
-        if (!resumenPorOrden[c.numeroOrden]) {
-          resumenPorOrden[c.numeroOrden] = {
+        if (!resumenPorOrden["ORD-" + c.numeroOrden]) {
+          resumenPorOrden["ORD-" + c.numeroOrden] = {
             material: c.numeroMaterial,
             totalPiezas: 0,
             cajas: []
           };
         }
-        resumenPorOrden[c.numeroOrden].totalPiezas += c.cantidadPiezas || 0;
-        resumenPorOrden[c.numeroOrden].cajas.push(c.codigoCaja);
+        resumenPorOrden["ORD-" + c.numeroOrden].totalPiezas += c.cantidadPiezas || 0;
+        resumenPorOrden["ORD-" + c.numeroOrden].cajas.push(c.codigoCaja);
       });
 
+      let totalOrdenes = Object.keys(resumenPorOrden).length;
+      let totalCajas = snapshot.numChildren();
+      let totalPiezas = Object.values(resumenPorOrden).reduce((a, b) => a + b.totalPiezas, 0);
+
       for (let orden in resumenPorOrden) {
-        const datos = resumenPorOrden[orden];
+        const datos = resumenPorOrden["ORD-" + orden];
         lista += `
           <li>
             Orden: ${orden} | Material: ${datos.material} | Piezas: ${datos.totalPiezas}
@@ -239,15 +253,13 @@
       }
 
       document.getElementById("resumenTarima").innerText =
-        `Órdenes: ${Object.keys(resumenPorOrden).length} | Cajas: ${snapshot.numChildren()} | Piezas: ${
-          Object.values(resumenPorOrden).reduce((a,b) => a + b.totalPiezas, 0)
-        }`;
+        `Órdenes: ${totalOrdenes} | Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
       document.getElementById("listaCajas").innerHTML = lista;
     });
   }
 
   function toggleCajas(orden) {
-    const lista = document.getElementById("cajas-" + orden);
+    const lista = document.getElementById("cajas-ORD-" + orden);
     lista.style.display = lista.style.display === "none" ? "block" : "none";
   }
 
