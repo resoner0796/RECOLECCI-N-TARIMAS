@@ -15,6 +15,11 @@
     li { margin-bottom: 10px; background: #f8f9fa; padding: 8px; border-radius: 6px; font-size: 14px; }
     small { color: #555; }
     #preview { width: 100%; max-height: 220px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; display:none; }
+    #preview.active { display: block; }
+    #statusMessage { padding: 10px; margin: 10px 0; border-radius: 6px; font-weight: bold; text-align: center; }
+    .status-success { background-color: #d4edda; color: #155724; }
+    .status-info { background-color: #d1ecf1; color: #0c5460; }
+    .status-error { background-color: #f8d7da; color: #721c24; }
     @media (max-width: 600px) {
       .card { margin: 10px; padding: 15px; max-width: 100%; }
       input, button { font-size: 14px; padding: 10px; }
@@ -49,9 +54,17 @@
   let currentTarima = null;
   let codeReader = null;
   let scanning = false;
-  let modo = ""; // "empleado" o "caja"
+  let modo = "";
 
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  function updateStatus(message, type) {
+    const statusDiv = document.getElementById("statusMessage");
+    if (statusDiv) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status-${type}`;
+    }
+  }
 
   function mostrarPantallaRecoleccion() {
     const contenedor = document.getElementById("pantalla5");
@@ -59,6 +72,7 @@
       <div class="card">
         <h2>Recolección</h2>
         <p>Escanee su número de empleado:</p>
+        <div id="statusMessage"></div>
         <input type="text" id="empleadoInput" placeholder="Escanear gafete">
         ${isMobile ? `<button id="btnEscEmpleado">📷 Iniciar escaneo</button>` : ""}
         <button id="btnEmpleadoSiguiente" disabled>➡️ Siguiente</button>
@@ -71,49 +85,58 @@
         empleadoActual = input.value.trim();
         input.value = "";
         document.getElementById("btnEmpleadoSiguiente").disabled = false;
-        alert("Empleado capturado: " + empleadoActual);
+        updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
       }
     });
 
     if (isMobile) {
       document.getElementById("btnEscEmpleado").addEventListener("click", () => {
-        if (!scanning) iniciarEscaneo("empleado");
-        else detenerCamara();
+        iniciarEscaneo("empleado");
       });
     }
-
+    
     document.getElementById("btnEmpleadoSiguiente").addEventListener("click", () => {
-      mostrarPantallaCrearTarima();
+      if (empleadoActual) {
+          mostrarPantallaCrearTarima();
+      } else {
+          updateStatus("Por favor, escanee o ingrese un número de empleado.", 'error');
+      }
     });
   }
 
-  function iniciarEscaneo(tipo) {
+  async function iniciarEscaneo(tipo) {
+    if (scanning) return;
     modo = tipo;
     scanning = true;
     const preview = document.getElementById("preview");
-    preview.style.display = "block";
+    preview.classList.add('active');
     codeReader = new ZXing.BrowserBarcodeReader();
+    updateStatus("Cámara activa. Escaneando...", 'info');
 
-    codeReader.decodeFromVideoDevice(undefined, 'preview', (result, err) => {
-      if (result) {
-        if (modo === "empleado") {
-          empleadoActual = result.text.trim();
-          document.getElementById("empleadoInput").value = empleadoActual;
-          document.getElementById("btnEmpleadoSiguiente").disabled = false;
-          alert("Empleado capturado: " + empleadoActual);
-          detenerCamara(); // Se cierra tras 1 escaneo
-        } else if (modo === "caja") {
-          procesarEscaneo(result.text.trim(), currentTarima);
-        }
+    try {
+      const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview');
+      if (modo === "empleado") {
+        empleadoActual = result.text.trim();
+        document.getElementById("empleadoInput").value = empleadoActual;
+        document.getElementById("btnEmpleadoSiguiente").disabled = false;
+        updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
+      } else if (modo === "caja") {
+        procesarEscaneo(result.text.trim(), currentTarima);
       }
-    });
+    } catch (err) {
+      console.error(err);
+      updateStatus("No se pudo escanear el código. Intente de nuevo.", 'error');
+    } finally {
+      detenerCamara();
+    }
   }
 
   function detenerCamara() {
     if (codeReader) {
       codeReader.reset();
     }
-    document.getElementById("preview").style.display = "none";
+    const preview = document.getElementById("preview");
+    preview.classList.remove('active');
     scanning = false;
   }
 
@@ -151,8 +174,9 @@
     contenedor.innerHTML = `
       <div class="card">
         <h3>Tarima: ${idTarima}</h3>
-        <p><b>Flujo:</b> 1) BX → 2) Material → 3) Cantidad</p>
-        <input type="text" id="codigoCaja" placeholder="Escanear código">
+        <p><b>Paso actual:</b> <span id="pasoActual">1) BX</span></p>
+        <div id="statusMessage"></div>
+        <input type="text" id="codigoCaja" placeholder="Escanear o ingresar BX">
         ${isMobile ? `<button id="btnEscCaja">📷 Iniciar escaneo</button>` : ""}
         <h4>Resumen</h4>
         <div id="resumenTarima">Órdenes: 0 | Cajas: 0 | Piezas: 0</div>
@@ -161,41 +185,63 @@
         <button onclick="terminarRegistroTarima('${idTarima}')">✅ Terminar Registro</button>
       </div>
     `;
+    updateStatus("Escanear el código de BX de la caja.", 'info');
 
     if (isMobile) {
       document.getElementById("btnEscCaja").addEventListener("click", () => {
-        if (!scanning) iniciarEscaneo("caja");
-        else detenerCamara();
+        iniciarEscaneo("caja");
       });
     }
-
+    
     configurarEscaneo(idTarima);
   }
 
   function procesarEscaneo(valor, idTarima) {
+    const input = document.getElementById("codigoCaja");
+    const pasoActual = document.getElementById("pasoActual");
+
     if (estadoEscaneo === 0) {
       cajaTemp = {};
       cajaTemp.codigoCaja = valor;
       cajaTemp.numeroOrden = valor.substring(2, 12);
       cajaTemp.empleadoId = empleadoActual;
       estadoEscaneo = 1;
-      alert("✅ BX capturado: " + cajaTemp.codigoCaja);
+      pasoActual.textContent = "2) Material";
+      input.placeholder = "Escanear o ingresar material";
+      updateStatus("✅ BX capturado. Ahora escanee el material.", 'info');
+      
     } else if (estadoEscaneo === 1) {
       cajaTemp.numeroMaterial = valor;
       estadoEscaneo = 2;
-      alert("✅ Material capturado: " + cajaTemp.numeroMaterial);
+      pasoActual.textContent = "3) Cantidad";
+      input.placeholder = "Escanear o ingresar cantidad";
+      updateStatus("✅ Material capturado. Ahora ingrese la cantidad.", 'info');
+      
     } else if (estadoEscaneo === 2) {
-      cajaTemp.cantidadPiezas = parseInt(valor);
+      const cantidad = parseInt(valor);
+      if (isNaN(cantidad) || cantidad <= 0) {
+          updateStatus("❌ Error: La cantidad debe ser un número válido mayor a cero.", 'error');
+          return;
+      }
+      cajaTemp.cantidadPiezas = cantidad;
       cajaTemp.timestamp = new Date().toISOString();
       const cajaId = db.ref(`tarimas/${idTarima}/cajas`).push().key;
-      db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp).then(() => {
-        actualizarResumenTarima(idTarima);
-      });
-      alert("📦 Caja guardada correctamente");
-      estadoEscaneo = 0;
-      cajaTemp = {};
-      if (modo === "caja") detenerCamara(); // cierra cámara al terminar flujo
+
+      db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp)
+          .then(() => {
+              updateStatus("📦 Caja guardada correctamente.", 'success');
+              actualizarResumenTarima(idTarima);
+              estadoEscaneo = 0;
+              pasoActual.textContent = "1) BX";
+              input.placeholder = "Escanear o ingresar BX";
+              cajaTemp = {};
+          })
+          .catch((error) => {
+              console.error("Error al guardar la caja:", error);
+              updateStatus("❌ Error al guardar la caja. Intente de nuevo.", 'error');
+          });
     }
+    input.value = "";
   }
 
   function configurarEscaneo(idTarima) {
@@ -226,6 +272,13 @@
         resumenPorOrden[c.numeroOrden].cajas.push(c.codigoCaja);
       });
 
+      let totalOrdenes = Object.keys(resumenPorOrden).length;
+      let totalCajas = snapshot.numChildren();
+      let totalPiezas = Object.values(resumenPorOrden).reduce((a, b) => a + b.totalPiezas, 0);
+
+      document.getElementById("resumenTarima").innerText =
+        `Órdenes: ${totalOrdenes} | Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
+
       for (let orden in resumenPorOrden) {
         const datos = resumenPorOrden[orden];
         lista += `
@@ -237,11 +290,6 @@
             </ul>
           </li>`;
       }
-
-      document.getElementById("resumenTarima").innerText =
-        `Órdenes: ${Object.keys(resumenPorOrden).length} | Cajas: ${snapshot.numChildren()} | Piezas: ${
-          Object.values(resumenPorOrden).reduce((a,b) => a + b.totalPiezas, 0)
-        }`;
       document.getElementById("listaCajas").innerHTML = lista;
     });
   }
