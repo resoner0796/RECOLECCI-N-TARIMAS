@@ -113,7 +113,7 @@
       padding: 5px 10px;
       margin: 0 2px;
     }
-    
+
     /* Estilos del modal y el marco de escaneo */
     #scannerModal {
         position: fixed;
@@ -250,17 +250,45 @@
   
   function mostrarPantallaPrincipal() {
     const contenedor = document.getElementById("pantalla5");
+    const turnoActual = determinarTurno();
+
     contenedor.innerHTML = `
       <div class="card">
         <h2>📦 Recolección</h2>
         <h3>Empleado: <b>${empleadoActual}</b></h3>
+        <h4>Resumen de Turno (${turnoActual})</h4>
+        <div id="resumenTurno" style="padding: 10px; background: #2c2c2e; border-radius: 8px;">
+            Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
+        </div>
         <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
-        <button onclick="mostrarTarimasCreadas()" class="btn-primary">📋 Ver tarimas creadas</button>
-        <button onclick="mostrarEdicionTarimas()" class="btn-primary">📝 Editar/Eliminar tarimas</button>
+        <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
+        <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
         <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
         <div id="tarimaContainer"></div>
       </div>
     `;
+
+    // Cargar el resumen del turno en tiempo real
+    actualizarResumenTurno();
+  }
+
+  function actualizarResumenTurno() {
+    const turnoActual = determinarTurno();
+    db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual).once("value").then(snapshot => {
+        let tarimasCount = 0;
+        let cajasCount = 0;
+        snapshot.forEach(tarimaSnapshot => {
+            const tarima = tarimaSnapshot.val();
+            if (tarima.turno === turnoActual) {
+                tarimasCount++;
+                if (tarima.cajas) {
+                    cajasCount += Object.keys(tarima.cajas).length;
+                }
+            }
+        });
+        document.getElementById("tarimasRegistradas").textContent = tarimasCount;
+        document.getElementById("cajasRegistradas").textContent = cajasCount;
+    });
   }
 
   function determinarTurno() {
@@ -510,6 +538,15 @@
     });
   }
   
+  function solicitarAccesoEdicion() {
+    const password = prompt("Por favor, ingrese la contraseña para editar/eliminar tarimas:");
+    if (password === "BORRAR25") {
+      mostrarEdicionTarimas();
+    } else {
+      alert("Contraseña incorrecta. Acceso denegado.");
+    }
+  }
+
   function mostrarEdicionTarimas() {
     const contenedor = document.getElementById("pantalla5");
     contenedor.innerHTML = `
