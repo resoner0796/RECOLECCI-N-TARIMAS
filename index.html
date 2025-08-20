@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recolección - Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f9; margin: 0; }
+    .card { background: #fff; padding: 20px; margin: 20px auto; max-width: 500px;
+            border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+    input { padding: 12px; width: 100%; margin: 10px 0; font-size: 16px; }
+    button { padding: 10px 14px; margin: 5px; cursor: pointer; font-size: 14px; }
+    h2, h3, h4 { margin: 10px 0; }
+    ul { padding-left: 15px; }
+    li { margin-bottom: 10px; background: #f8f9fa; padding: 8px; border-radius: 6px; font-size: 14px; }
+    small { color: #555; }
+    #preview { width: 100%; max-height: 200px; margin-top: 10px; border: 1px solid #ccc; border-radius: 6px; display:none; }
+    @media (max-width: 600px) {
+      .card { margin: 10px; padding: 15px; max-width: 100%; }
+      input, button { font-size: 14px; padding: 10px; }
+      li { font-size: 13px; }
+    }
+  </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <!-- ZXing para escaneo -->
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+</head>
+<body>
+
+  <div id="pantalla5"></div>
+  <video id="preview"></video>
+
+<script>
+  // 🔹 Configuración Firebase
+  const firebaseConfig = {
+    apiKey: "AIzaSyCPTEu73s2rVIm2VsdTk59kVIOyi1jeyu8",
+    authDomain: "panel-logistica.firebaseapp.com",
+    databaseURL: "https://panel-logistica-default-rtdb.firebaseio.com",
+    projectId: "panel-logistica",
+    storageBucket: "panel-logistica.appspot.com",
+    messagingSenderId: "38365879945",
+    appId: "1:38365879945:web:e2f3590fe77f013dba3058"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let empleadoActual = null;
+  let estadoEscaneo = 0;
+  let cajaTemp = {};
+  let currentTarima = null;
+  let codeReader = null;
+  let scanning = false;
+
+  // Detectar móvil
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  // Pantalla inicial
+  function mostrarPantallaRecoleccion() {
+    const contenedor = document.getElementById("pantalla5");
+    contenedor.innerHTML = `
+      <div class="card">
+        <h2>Recolección</h2>
+        <p>Escanee su número de empleado:</p>
+        <input type="text" id="empleadoInput" placeholder="Escanear gafete">
+        ${isMobile ? `<button onclick="iniciarEscaneoEmpleado()">📷 Escanear</button>` : ""}
+        <button id="btnEmpleadoSiguiente" disabled>➡️ Siguiente</button>
+      </div>
+    `;
+
+    const input = document.getElementById("empleadoInput");
+    input.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        empleadoActual = input.value.trim();
+        input.value = "";
+        document.getElementById("btnEmpleadoSiguiente").disabled = false;
+        alert("Empleado capturado: " + empleadoActual);
+      }
+    });
+
+    document.getElementById("btnEmpleadoSiguiente").addEventListener("click", () => {
+      mostrarPantallaCrearTarima();
+    });
+  }
+
+  // Escaneo de empleado con cámara
+  async function iniciarEscaneoEmpleado() {
+    if (scanning) return;
+    scanning = true;
+    const preview = document.getElementById("preview");
+    preview.style.display = "block";
+    codeReader = new ZXing.BrowserBarcodeReader();
+    try {
+      const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview');
+      empleadoActual = result.text.trim();
+      document.getElementById("empleadoInput").value = empleadoActual;
+      document.getElementById("btnEmpleadoSiguiente").disabled = false;
+      alert("Empleado capturado: " + empleadoActual);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      detenerCamara();
+    }
+  }
+
+  // Crear tarima
+  function mostrarPantallaCrearTarima() {
+    const contenedor = document.getElementById("pantalla5");
+    contenedor.innerHTML = `
+      <div class="card">
+        <h2>Recolección</h2>
+        <p>Empleado: <b>${empleadoActual}</b></p>
+        <button onclick="crearNuevaTarima()">📦 Crear Nueva Tarima</button>
+        <div id="tarimaContainer"></div>
+      </div>
+    `;
+  }
+
+  function crearNuevaTarima() {
+    db.ref("tarimas").once("value").then(snapshot => {
+      const total = snapshot.numChildren();
+      const idTarima = "TAR-" + String(total + 1).padStart(3, '0');
+      currentTarima = idTarima;
+
+      db.ref("tarimas/" + idTarima).set({
+        id: idTarima,
+        empleadoId: empleadoActual,
+        fechaCreacion: new Date().toISOString(),
+        cajas: {}
+      }).then(() => {
+        mostrarFormularioTarima(idTarima);
+      });
+    });
+  }
+
+  // Formulario tarima
+  function mostrarFormularioTarima(idTarima) {
+    const contenedor = document.getElementById("tarimaContainer");
+    contenedor.innerHTML = `
+      <div class="card">
+        <h3>Tarima: ${idTarima}</h3>
+        <p><b>Flujo de escaneo:</b> 1) BX → 2) Material → 3) Cantidad</p>
+        <input type="text" id="codigoCaja" placeholder="Escanear código">
+        ${isMobile ? `<button onclick="iniciarEscaneoCaja()">📷 Escanear</button>` : ""}
+        <h4>Resumen</h4>
+        <div id="resumenTarima">Órdenes: 0 | Cajas: 0 | Piezas: 0</div>
+        <h4>Cajas registradas</h4>
+        <ul id="listaCajas"></ul>
+        <button onclick="terminarRegistroTarima('${idTarima}')">✅ Terminar Registro</button>
+      </div>
+    `;
+    configurarEscaneo(idTarima);
+  }
+
+  // Escaneo de cajas con cámara
+  async function iniciarEscaneoCaja() {
+    if (scanning) return;
+    scanning = true;
+    const preview = document.getElementById("preview");
+    preview.style.display = "block";
+    codeReader = new ZXing.BrowserBarcodeReader();
+
+    try {
+      const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview');
+      procesarEscaneo(result.text.trim(), currentTarima);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      detenerCamara();
+    }
+  }
+
+  function procesarEscaneo(valor, idTarima) {
+    if (estadoEscaneo === 0) {
+      cajaTemp = {};
+      cajaTemp.codigoCaja = valor;
+      cajaTemp.numeroOrden = valor.substring(2, 12);
+      cajaTemp.empleadoId = empleadoActual;
+      estadoEscaneo = 1;
+      alert("✅ BX capturado: " + cajaTemp.codigoCaja);
+    } else if (estadoEscaneo === 1) {
+      cajaTemp.numeroMaterial = valor;
+      estadoEscaneo = 2;
+      alert("✅ Material capturado: " + cajaTemp.numeroMaterial);
+    } else if (estadoEscaneo === 2) {
+      cajaTemp.cantidadPiezas = parseInt(valor);
+      cajaTemp.timestamp = new Date().toISOString();
+      const cajaId = db.ref(`tarimas/${idTarima}/cajas`).push().key;
+      db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp).then(() => {
+        actualizarResumenTarima(idTarima);
+      });
+      alert("📦 Caja guardada correctamente");
+      estadoEscaneo = 0;
+      cajaTemp = {};
+    }
+  }
+
+  // Escaneo manual (con Enter)
+  function configurarEscaneo(idTarima) {
+    const input = document.getElementById("codigoCaja");
+    input.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        procesarEscaneo(input.value.trim(), idTarima);
+        input.value = "";
+      }
+    });
+  }
+
+  // Agrupamiento expandible
+  function actualizarResumenTarima(idTarima) {
+    db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
+      let resumenPorOrden = {};
+      let lista = "";
+
+      snapshot.forEach(child => {
+        const c = child.val();
+        if (!resumenPorOrden[c.numeroOrden]) {
+          resumenPorOrden[c.numeroOrden] = {
+            material: c.numeroMaterial,
+            totalPiezas: 0,
+            cajas: []
+          };
+        }
+        resumenPorOrden[c.numeroOrden].totalPiezas += c.cantidadPiezas || 0;
+        resumenPorOrden[c.numeroOrden].cajas.push(c.codigoCaja);
+      });
+
+      for (let orden in resumenPorOrden) {
+        const datos = resumenPorOrden[orden];
+        lista += `
+          <li>
+            Orden: ${orden} | Material: ${datos.material} | Piezas: ${datos.totalPiezas}
+            <button onclick="toggleCajas('${orden}')">Ver cajas</button>
+            <ul id="cajas-${orden}" style="display:none;">
+              ${datos.cajas.map(c => `<li>${c}</li>`).join("")}
+            </ul>
+          </li>`;
+      }
+
+      document.getElementById("resumenTarima").innerText =
+        `Órdenes: ${Object.keys(resumenPorOrden).length} | Cajas: ${snapshot.numChildren()} | Piezas: ${
+          Object.values(resumenPorOrden).reduce((a,b) => a + b.totalPiezas, 0)
+        }`;
+      document.getElementById("listaCajas").innerHTML = lista;
+    });
+  }
+
+  function toggleCajas(orden) {
+    const lista = document.getElementById("cajas-" + orden);
+    lista.style.display = lista.style.display === "none" ? "block" : "none";
+  }
+
+  function terminarRegistroTarima(idTarima) {
+    alert("Registro finalizado para tarima " + idTarima);
+  }
+
+  function detenerCamara() {
+    if (codeReader) {
+      codeReader.reset();
+    }
+    document.getElementById("preview").style.display = "none";
+    scanning = false;
+  }
+
+  // Iniciar
+  mostrarPantallaRecoleccion();
+</script>
+</body>
+</html>
