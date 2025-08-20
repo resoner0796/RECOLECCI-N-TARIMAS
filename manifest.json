@@ -2,7 +2,7 @@
   "name": "App Recolección",
   "short_name": "Reco",
   "description": "Aplicación de Recolección de Tarimas",
-  "start_url": "/",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
