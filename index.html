@@ -347,16 +347,16 @@
 
   function crearNuevaTarima() {
     const turno = determinarTurno();
-    db.ref("tarimas").orderByChild("id").limitToLast(1).once("value").then(snapshot => {
-      let lastIdNumber = 0;
+    db.ref("tarimas").orderByKey().limitToLast(1).once("value").then(snapshot => {
+      let nextIdNumber = 1;
       if (snapshot.exists()) {
-        const lastTarima = Object.values(snapshot.val())[0];
-        const lastId = lastTarima.id;
-        const numberPart = lastId.split('-')[1];
-        lastIdNumber = parseInt(numberPart, 10);
+        const lastTarimaId = Object.keys(snapshot.val())[0];
+        const lastIdNumber = parseInt(lastTarimaId.split('-')[1]);
+        if (!isNaN(lastIdNumber)) {
+            nextIdNumber = lastIdNumber + 1;
+        }
       }
 
-      const nextIdNumber = lastIdNumber + 1;
       const idTarima = "TAR-" + String(nextIdNumber).padStart(3, '0');
       currentTarima = idTarima;
 
@@ -534,6 +534,13 @@
       alert(`Registro finalizado para tarima ${idTarima}.`);
       mostrarPantallaPrincipal();
       updateStatus("Listo para crear una nueva tarima.", 'info');
+  }
+
+  function toggleCajas(id) {
+    const lista = document.getElementById(`cajas-${id}`);
+    if (lista) {
+      lista.style.display = lista.style.display === "none" ? "block" : "none";
+    }
   }
 
   function mostrarTarimasCreadas() {
