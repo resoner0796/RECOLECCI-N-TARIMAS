@@ -1,13 +1,16 @@
-const CACHE_NAME = 'recoleccion-cache-v1';
+const CACHE_NAME = 'recoleccion-cache-v2'; // Cambia la versión
 const urlsToCache = [
-  '/', // Cacha la página principal
+  '/',
   '/index.html',
-  '/icon-192x192.PNG',
-  '/icon-512x512.PNG',
+  '/manifest.json', // Es crucial cachear el manifest
+  '/icon-192.PNG',
+  '/icon-512.PNG',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js',
   'https://unpkg.com/@zxing/library@latest'
 ];
+// ... el resto del código es el mismo
+
 
 self.addEventListener('install', event => {
   event.waitUntil(
