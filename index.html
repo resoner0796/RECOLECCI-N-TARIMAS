@@ -85,6 +85,7 @@
       font-size: 14px;
       text-align: left;
       overflow: hidden;
+      word-wrap: break-word;
     }
     small { color: #8e8e93; }
     #statusMessage { 
@@ -318,7 +319,9 @@
     updateStatus("Cámara activa. Escaneando...", 'info');
 
     try {
-      const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview');
+      const videoInputDevices = await codeReader.getVideoInputDevices();
+      const selectedDeviceId = videoInputDevices[0].deviceId;
+      const result = await codeReader.decodeOnceFromVideoDevice(selectedDeviceId, 'preview');
       if (modo === "empleado") {
         empleadoActual = result.text.trim();
         updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
@@ -345,20 +348,18 @@
 
   function crearNuevaTarima() {
     const turno = determinarTurno();
-    db.ref("tarimas").once("value").then(snapshot => {
-      const total = snapshot.numChildren();
-      const idTarima = "TAR-" + String(total + 1).padStart(3, '0');
-      currentTarima = idTarima;
+    const nuevaTarimaRef = db.ref("tarimas").push();
+    const idTarima = nuevaTarimaRef.key;
+    currentTarima = idTarima;
 
-      db.ref("tarimas/" + idTarima).set({
-        id: idTarima,
-        empleadoId: empleadoActual,
-        fechaCreacion: new Date().toISOString(),
-        turno: turno,
-        cajas: {}
-      }).then(() => {
-        mostrarFormularioTarima(idTarima);
-      });
+    nuevaTarimaRef.set({
+      id: idTarima,
+      empleadoId: empleadoActual,
+      fechaCreacion: new Date().toISOString(),
+      turno: turno,
+      cajas: {}
+    }).then(() => {
+      mostrarFormularioTarima(idTarima);
     });
   }
 
@@ -372,7 +373,7 @@
         <input type="text" id="codigoCaja" placeholder="Escanear o ingresar BX">
         ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
         <h4>Resumen</h4>
-        <div id="resumenTarima">Órdenes: 0 | Cajas: 0 | Piezas: 0</div>
+        <div id="resumenTarima">Cajas: 0 | Piezas: 0</div>
         <h4>Cajas registradas</h4>
         <ul id="listaCajas"></ul>
         <button onclick="terminarRegistroTarima('${idTarima}')" class="btn-orange">✅ Terminar Registro</button>
@@ -387,6 +388,7 @@
     }
     
     configurarEscaneo(idTarima);
+    actualizarResumenTarima(idTarima);
   }
 
   function procesarEscaneo(valor, idTarima) {
@@ -394,7 +396,6 @@
     const pasoActual = document.getElementById("pasoActual");
 
     if (estadoEscaneo === 0) {
-      // Nueva lógica de validación
       db.ref("tarimas").once("value").then(snapshot => {
           let bxEncontrado = false;
           let tarimaAnterior = null;
@@ -410,7 +411,7 @@
                   }
               }
               if (bxEncontrado) {
-                  return true; // Salir del bucle forEach
+                  return true;
               }
           });
 
@@ -424,7 +425,6 @@
               return;
           }
 
-          // Si el BX no se encuentra, continuar con el flujo normal
           cajaTemp = {};
           cajaTemp.codigoCaja = valor;
           cajaTemp.numeroOrden = valor.substring(2, 12);
@@ -480,46 +480,43 @@
 
   function actualizarResumenTarima(idTarima) {
     db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
-      let resumenPorOrden = {};
+      let totalCajas = 0;
+      let totalPiezas = 0;
       let lista = "";
-
-      snapshot.forEach(child => {
-        const c = child.val();
-        if (!resumenPorOrden[c.numeroOrden]) {
-          resumenPorOrden[c.numeroOrden] = {
-            totalPiezas: 0,
-            cajas: []
-          };
-        }
-        resumenPorOrden[c.numeroOrden].totalPiezas += c.cantidadPiezas || 0;
-        resumenPorOrden[c.numeroOrden].cajas.push(c.codigoCaja);
-      });
-
-      let totalOrdenes = Object.keys(resumenPorOrden).length;
-      let totalCajas = snapshot.numChildren();
-      let totalPiezas = Object.values(resumenPorOrden).reduce((a, b) => a + b.totalPiezas, 0);
-
-      document.getElementById("resumenTarima").innerText =
-        `Órdenes: ${totalOrdenes} | Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
-
-      for (let orden in resumenPorOrden) {
-        const datos = resumenPorOrden[orden];
+      
+      snapshot.forEach(cajaSnapshot => {
+        const caja = cajaSnapshot.val();
+        const cajaId = cajaSnapshot.key; // Obtén el ID de la caja
+        totalCajas++;
+        totalPiezas += caja.cantidadPiezas || 0;
+        
         lista += `
           <li>
-            Orden: ${orden} | Piezas: ${datos.totalPiezas}
-            <button onclick="toggleCajas('${orden}')" class="btn-secondary list-item-btn">Ver cajas</button>
-            <ul id="cajas-${orden}" style="display:none;">
-              ${datos.cajas.map(c => `<li>${c}</li>`).join("")}
-            </ul>
+            BX: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas}
+            <button onclick="eliminarCaja('${idTarima}', '${cajaId}')" class="btn-danger list-item-btn">🗑️</button>
+            <br><small>Orden: ${caja.numeroOrden}</small>
           </li>`;
-      }
+      });
+  
+      document.getElementById("resumenTarima").innerText =
+        `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
       document.getElementById("listaCajas").innerHTML = lista;
     });
   }
 
-  function toggleCajas(orden) {
-    const lista = document.getElementById("cajas-" + orden);
-    lista.style.display = lista.style.display === "none" ? "block" : "none";
+  function eliminarCaja(idTarima, idCaja) {
+    if (confirm("¿Estás seguro de que quieres eliminar esta caja?")) {
+      db.ref(`tarimas/${idTarima}/cajas/${idCaja}`).remove()
+        .then(() => {
+          updateStatus("Caja eliminada correctamente.", 'success');
+          // Actualiza la lista para reflejar el cambio
+          actualizarResumenTarima(idTarima);
+        })
+        .catch(error => {
+          console.error("Error al eliminar la caja:", error);
+          updateStatus("Hubo un error al eliminar la caja. Intenta de nuevo.", 'error');
+        });
+    }
   }
 
   function terminarRegistroTarima(idTarima) {
@@ -625,10 +622,8 @@
 
   function editarTarima(idTarima) {
       currentTarima = idTarima;
-      // Reutiliza la función de mostrar formulario de tarima para la edición
       mostrarFormularioTarima(idTarima);
       updateStatus(`Editando tarima ${idTarima}`, 'info');
-      // Puedes cargar los datos existentes en la interfaz si lo deseas, pero el flujo ya lo maneja
   }
 
   function eliminarTarima(idTarima) {
