@@ -1,38 +1,36 @@
-const CACHE_NAME = 'recoleccion-cache-v2'; // Cambia la versión
+const CACHE_NAME = 'recoleccion-cache-v3';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json', // Es crucial cachear el manifest
-  '/icon-192.PNG',
-  '/icon-512.PNG',
+  './index.html',
+  './manifest.json',
+  './icon-192.PNG',
+  './icon-512.PNG',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js',
   'https://unpkg.com/@zxing/library@latest'
 ];
-// ... el resto del código es el mismo
-
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-      .catch(error => {
-        console.error('Failed to cache resources:', error);
-      })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
 });
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request).catch(() => {
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
         }
-        return fetch(event.request);
-      })
+      });
+    })
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    )
   );
 });
