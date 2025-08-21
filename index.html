@@ -314,18 +314,28 @@ async function iniciarEscaneo(tipo) {
   scanning = true;
   const scannerModal = document.getElementById("scannerModal");
   scannerModal.classList.add('active');
-  const preview = document.getElementById("preview");
+
   codeReader = new ZXing.BrowserBarcodeReader();
   updateStatus("Cámara activa. Escaneando...", 'info');
 
   try {
-    const constraints = {
-      video: {
-        facingMode: { exact: "environment" }
-      }
-    };
+    const videoInputDevices = await codeReader.getVideoInputDevices();
+    let selectedDeviceId = null;
 
-    const result = await codeReader.decodeOnceFromStream(navigator.mediaDevices.getUserMedia(constraints), 'preview');
+    // Busca la cámara trasera de forma más confiable
+    const rearCamera = videoInputDevices.find(device =>
+      device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear') || device.label.toLowerCase().includes('environment')
+    );
+
+    if (rearCamera) {
+      selectedDeviceId = rearCamera.deviceId;
+    } else if (videoInputDevices.length > 0) {
+      selectedDeviceId = videoInputDevices[0].deviceId;
+    } else {
+      throw new Error('No se encontraron dispositivos de cámara.');
+    }
+
+    const result = await codeReader.decodeOnceFromVideoDevice(selectedDeviceId, 'preview');
 
     if (modo === "empleado") {
       empleadoActual = result.text.trim();
@@ -389,7 +399,7 @@ function mostrarFormularioTarima(idTarima) {
       <h3>Tarima: ${idTarima}</h3>
       <h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual || 'Sin seleccionar'}</span></h4>
       <div id="statusMessage"></div>
-      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 12, 24, 32)">
+      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 6, 12, 24, 34)">
       ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
       <h4>Resumen</h4>
       <div id="resumenTarima">Cajas: 0 | Piezas: 0</div>
@@ -449,7 +459,7 @@ function procesarEscaneo(valor, idTarima) {
   }
 
   if (cantidadPiezasActual === null) {
-    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 6, 12, 24, 34).", 'error');
+    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 12, 24, 32).", 'error');
     input.value = "";
     return;
   }
