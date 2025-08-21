@@ -128,6 +128,7 @@
         justify-content: center;
         align-items: center;
         z-index: 100;
+        flex-direction: column;
     }
     #scannerModal.active {
         display: flex;
@@ -183,6 +184,7 @@
       <video id="preview"></video>
       <div class="scanner-frame"></div>
     </div>
+    <button id="closeScannerBtn" class="btn-danger" style="width: 90%; max-width: 400px; margin-top: 20px;">❌ Cerrar</button>
   </div>
 
 <script>
@@ -475,7 +477,7 @@
           })
           .catch((error) => {
               console.error("Error al guardar la caja:", error);
-              updateStatus("❌ Error al guardar la caja. Intente de nuevo.", 'error');
+              updateStatus("❌ Error al guardar la caja. Intenta de nuevo.", 'error');
           });
     }
     input.value = "";
@@ -495,6 +497,7 @@
       let totalCajas = 0;
       let totalPiezas = 0;
       let lista = "";
+      const cajasPorOrden = {};
       
       snapshot.forEach(cajaSnapshot => {
         const caja = cajaSnapshot.val();
@@ -502,13 +505,31 @@
         totalCajas++;
         totalPiezas += caja.cantidadPiezas || 0;
         
+        // Agrupa las cajas por número de orden
+        const orden = caja.numeroOrden;
+        if (!cajasPorOrden[orden]) {
+          cajasPorOrden[orden] = {
+            totalPiezas: 0,
+            cajas: []
+          };
+        }
+        cajasPorOrden[orden].totalPiezas += caja.cantidadPiezas || 0;
+        cajasPorOrden[orden].cajas.push({ id: cajaId, codigo: caja.codigoCaja });
+      });
+
+      // Genera la lista HTML a partir de los datos agrupados
+      for (const orden in cajasPorOrden) {
+        const datos = cajasPorOrden[orden];
         lista += `
           <li>
-            BX: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas}
-            <button onclick="eliminarCaja('${idTarima}', '${cajaId}')" class="btn-danger list-item-btn">🗑️</button>
-            <br><small>Orden: ${caja.numeroOrden}</small>
-          </li>`;
-      });
+            Orden: ${orden} | Piezas: ${datos.totalPiezas}
+            <button onclick="toggleCajas('${orden}')" class="btn-secondary list-item-btn">Ver cajas</button>
+            <ul id="cajas-${orden}" style="display:none;">
+              ${datos.cajas.map(c => `<li>${c.codigo} <button onclick="eliminarCaja('${idTarima}', '${c.id}')" class="btn-danger list-item-btn">🗑️</button></li>`).join("")}
+            </ul>
+          </li>
+        `;
+      }
   
       document.getElementById("resumenTarima").innerText =
         `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
@@ -680,7 +701,10 @@
     });
   }
 
-  mostrarPantallaRecoleccion();
+  document.addEventListener('DOMContentLoaded', () => {
+      mostrarPantallaRecoleccion();
+      document.getElementById('closeScannerBtn').addEventListener('click', detenerCamara);
+  });
 </script>
 </body>
 </html>
