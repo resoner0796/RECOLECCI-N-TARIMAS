@@ -335,12 +335,9 @@
                 } else if (modo === "confirmador") {
                     confirmadorActual = result.text.trim();
                     updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
-                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
-                } else if (modo === "tarimaConfirmacion") {
-                    tarimaAConfirmar = result.text.trim();
-                    procesarConfirmacion();
-                } else if (modo === "cajaConfirmacion") {
-                    procesarConfirmacionCaja(result.text.trim());
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500); // Cambio aquí
+                } else if (modo === "cajaConfirmacion") { // Cambio aquí
+                    buscarTarimaPorCaja(result.text.trim());
                 }
             } catch (err) {
                 console.error("Error al iniciar la cámara:", err);
@@ -756,7 +753,7 @@
                     confirmadorActual = input.value.trim();
                     input.value = "";
                     updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
-                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500); // Cambio aquí
                 }
             });
 
@@ -767,53 +764,80 @@
             }
         }
 
-        function mostrarPantallaConfirmacion2() {
+        function mostrarPantallaConfirmacionCaja() {
             const contenedor = document.getElementById("pantalla5");
             contenedor.innerHTML = `
                 <div class="card">
                     <h2>✅ Confirmación de Tarima</h2>
                     <h3>Confirmador: <b>${confirmadorActual}</b></h3>
-                    <p>Paso 2: Escanee el código de la tarima a confirmar.</p>
+                    <p>Paso 2: Escanee el código de una caja (BX) de la tarima a confirmar.</p>
                     <div id="statusMessage"></div>
-                    <input type="text" id="tarimaInput" placeholder="Escanear TAR-XXX">
-                    ${isMobile ? `<button id="btnEscTarima" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <input type="text" id="cajaConfirmacionInput" placeholder="Escanear BX-XXX">
+                    ${isMobile ? `<button id="btnEscCajaConf" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
                     <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
                 </div>
             `;
-            updateStatus("Esperando escaneo de tarima...", 'info');
-            const input = document.getElementById("tarimaInput");
+            updateStatus("Esperando escaneo de caja...", 'info');
+            const input = document.getElementById("cajaConfirmacionInput");
             input.addEventListener("keypress", function(e) {
                 if (e.key === "Enter") {
-                    tarimaAConfirmar = input.value.trim();
-                    procesarConfirmacion();
+                    buscarTarimaPorCaja(input.value.trim());
                 }
             });
 
             if (isMobile) {
-                document.getElementById("btnEscTarima").addEventListener("click", () => {
-                    iniciarEscaneo("tarimaConfirmacion");
+                document.getElementById("btnEscCajaConf").addEventListener("click", () => {
+                    iniciarEscaneo("cajaConfirmacion");
                 });
             }
         }
 
-        function procesarConfirmacion() {
-            db.ref(`tarimas/${tarimaAConfirmar}`).once("value").then(snapshot => {
-                const tarimaData = snapshot.val();
-                if (!tarimaData) {
-                    updateStatus("❌ Error: Tarima no encontrada.", 'error');
-                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+        function buscarTarimaPorCaja(codigoCaja) {
+            if (!codigoCaja.startsWith('BX')) {
+                updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
+                setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
+                return;
+            }
+
+            db.ref("tarimas").once("value").then(snapshot => {
+                let tarimaEncontrada = null;
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    if (tarima.cajas) {
+                        for (let key in tarima.cajas) {
+                            if (tarima.cajas[key].codigoCaja === codigoCaja) {
+                                tarimaEncontrada = tarima;
+                                tarimaAConfirmar = tarima.id;
+                                break;
+                            }
+                        }
+                    }
+                    if (tarimaEncontrada) {
+                        return true;
+                    }
+                });
+
+                if (!tarimaEncontrada) {
+                    updateStatus("❌ Error: Caja no encontrada en ninguna tarima.", 'error');
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
                     return;
                 }
-                if (tarimaData.estado === 'confirmada') {
-                    updateStatus("❌ Error: Esta tarima ya ha sido confirmada.", 'error');
-                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+
+                if (tarimaEncontrada.estado === 'confirmada') {
+                    updateStatus(`❌ Error: La tarima ${tarimaEncontrada.id} ya ha sido confirmada.`, 'error');
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
                     return;
                 }
-                mostrarFormularioConfirmacionCajas(tarimaData);
+                
+                // Si la tarima es válida y está pendiente, mostramos el formulario de confirmación
+                mostrarFormularioConfirmacionCajas(tarimaEncontrada);
+                // También procesamos la caja que se escaneó inicialmente
+                procesarConfirmacionCaja(codigoCaja);
+
             }).catch(error => {
-                console.error("Error al buscar la tarima:", error);
+                console.error("Error al buscar la tarima por caja:", error);
                 updateStatus("❌ Error al buscar la tarima. Intente de nuevo.", 'error');
-                setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+                setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
             });
         }
 
@@ -924,19 +948,20 @@
             }
         }
 
-       // PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-navigator.serviceWorker.register('./sw.js')
-      .then(reg => {
-        console.log('Service Worker registrado con éxito:', reg);
-      })
-      .catch(err => {
-        console.error('Error al registrar el Service Worker:', err);
-      });
-  });
-}
-
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Se usa la ruta relativa del archivo para que funcione con GitHub Pages
+                const path = window.location.pathname.split('/').slice(0, -1).join('/');
+                navigator.serviceWorker.register(`${path}/sw.js`, { scope: `${path}/` })
+                    .then(reg => {
+                        console.log("✅ Service Worker registrado con éxito:", reg);
+                    })
+                    .catch(err => {
+                        console.error("❌ Error al registrar Service Worker:", err);
+                    });
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             mostrarPantallaRecoleccion();
