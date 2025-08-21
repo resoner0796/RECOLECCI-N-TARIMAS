@@ -320,7 +320,24 @@ async function iniciarEscaneo(tipo) {
 
   try {
     const videoInputDevices = await codeReader.getVideoInputDevices();
-    const selectedDeviceId = videoInputDevices[0].deviceId;
+    let selectedDeviceId = null;
+
+    // Lógica para encontrar la cámara trasera
+    const rearCamera = videoInputDevices.find(device =>
+      device.label.toLowerCase().includes('rear') || device.label.toLowerCase().includes('back')
+    );
+
+    if (rearCamera) {
+      selectedDeviceId = rearCamera.deviceId;
+      updateStatus("Usando cámara trasera...", 'info');
+    } else if (videoInputDevices.length > 0) {
+      // Si no se encuentra una cámara trasera, usar la primera disponible como respaldo
+      selectedDeviceId = videoInputDevices[0].deviceId;
+      updateStatus("No se encontró cámara trasera. Usando la cámara predeterminada.", 'warning');
+    } else {
+      throw new Error('No se encontraron dispositivos de cámara.');
+    }
+
     const result = await codeReader.decodeOnceFromVideoDevice(selectedDeviceId, 'preview');
     if (modo === "empleado") {
       empleadoActual = result.text.trim();
@@ -384,7 +401,7 @@ function mostrarFormularioTarima(idTarima) {
       <h3>Tarima: ${idTarima}</h3>
       <h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual || 'Sin seleccionar'}</span></h4>
       <div id="statusMessage"></div>
-      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 12, 24, 32)">
+      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 6, 12, 24, 34)">
       ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
       <h4>Resumen</h4>
       <div id="resumenTarima">Cajas: 0 | Piezas: 0</div>
@@ -444,7 +461,7 @@ function procesarEscaneo(valor, idTarima) {
   }
 
   if (cantidadPiezasActual === null) {
-    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 6, 12, 24, 34).", 'error');
+    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 12, 24, 32).", 'error');
     input.value = "";
     return;
   }
