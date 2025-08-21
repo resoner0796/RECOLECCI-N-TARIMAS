@@ -2,8 +2,8 @@ const CACHE_NAME = 'recoleccion-cache-v3';
 const urlsToCache = [
   './index.html',
   './manifest.json',
-  './icon-192.PNG',
-  './icon-512.PNG',
+  './icono-192.png',
+  './icono-512.png',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js',
   'https://unpkg.com/@zxing/library@latest'
