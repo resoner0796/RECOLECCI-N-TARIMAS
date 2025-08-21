@@ -319,26 +319,14 @@ async function iniciarEscaneo(tipo) {
   updateStatus("Cámara activa. Escaneando...", 'info');
 
   try {
-    const videoInputDevices = await codeReader.getVideoInputDevices();
-    let selectedDeviceId = null;
+    const constraints = {
+      video: {
+        facingMode: { exact: "environment" }
+      }
+    };
 
-    // Lógica para encontrar la cámara trasera
-    const rearCamera = videoInputDevices.find(device =>
-      device.label.toLowerCase().includes('rear') || device.label.toLowerCase().includes('back')
-    );
+    const result = await codeReader.decodeOnceFromStream(navigator.mediaDevices.getUserMedia(constraints), 'preview');
 
-    if (rearCamera) {
-      selectedDeviceId = rearCamera.deviceId;
-      updateStatus("Usando cámara trasera...", 'info');
-    } else if (videoInputDevices.length > 0) {
-      // Si no se encuentra una cámara trasera, usar la primera disponible como respaldo
-      selectedDeviceId = videoInputDevices[0].deviceId;
-      updateStatus("No se encontró cámara trasera. Usando la cámara predeterminada.", 'warning');
-    } else {
-      throw new Error('No se encontraron dispositivos de cámara.');
-    }
-
-    const result = await codeReader.decodeOnceFromVideoDevice(selectedDeviceId, 'preview');
     if (modo === "empleado") {
       empleadoActual = result.text.trim();
       updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
@@ -347,8 +335,8 @@ async function iniciarEscaneo(tipo) {
       procesarEscaneo(result.text.trim(), currentTarima);
     }
   } catch (err) {
-    console.error(err);
-    updateStatus("No se pudo escanear el código. Intente de nuevo.", 'error');
+    console.error("Error al iniciar la cámara:", err);
+    updateStatus("❌ No se pudo iniciar la cámara. Verifique que los permisos estén habilitados y que sea un dispositivo móvil.", 'error');
   } finally {
     detenerCamara();
   }
@@ -461,7 +449,7 @@ function procesarEscaneo(valor, idTarima) {
   }
 
   if (cantidadPiezasActual === null) {
-    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 12, 24, 32).", 'error');
+    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 6, 12, 24, 34).", 'error');
     input.value = "";
     return;
   }
@@ -594,9 +582,29 @@ function eliminarCaja(idTarima, idCaja) {
 }
 
 function terminarRegistroTarima(idTarima) {
-  alert(`Registro finalizado para tarima ${idTarima}.`);
-  mostrarPantallaPrincipal();
-  updateStatus("Listo para crear una nueva tarima.", 'info');
+  db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
+    const totalCajas = snapshot.exists() ? snapshot.size : 0;
+    const cajasAInspeccionar = Math.ceil(totalCajas * 0.20); // Calcula el 20% y redondea hacia arriba
+
+    mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar);
+    mostrarPantallaPrincipal();
+    updateStatus("Listo para crear una nueva tarima.", 'info');
+  });
+}
+
+function mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar) {
+  const popup = document.createElement('div');
+  popup.id = 'inspeccionPopup';
+  popup.innerHTML = `
+    <div class="popup-content">
+      <h3>✅ Registro de Tarima Finalizado</h3>
+      <p>ID de Tarima: <b>${idTarima}</b></p>
+      <p>Total de cajas en la tarima: <b>${totalCajas}</b></p>
+      <p style="font-size: 1.2em; font-weight: bold; color: #ffeb3b;">Cajas a inspeccionar: <b>${cajasAInspeccionar}</b></p>
+      <button onclick="document.getElementById('inspeccionPopup').remove()" class="btn-primary">Aceptar</button>
+    </div>
+  `;
+  document.body.appendChild(popup);
 }
 
 function toggleCajas(id) {
@@ -746,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
   mostrarPantallaRecoleccion();
   document.getElementById('closeScannerBtn').addEventListener('click', detenerCamara);
 });
+
 </script>
 </body>
 </html>
