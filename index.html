@@ -224,7 +224,20 @@
             }
         }
 
-        function mostrarPantallaRecoleccion() {
+        function mostrarPantallaInicio() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>Seleccione su función</h2>
+                    <button onclick="iniciarFlujoRecoleccion()" class="btn-primary">📦 Recolección</button>
+                    <button onclick="iniciarFlujoConfirmacion()" class="btn-green">✅ Confirmación</button>
+                    <div id="statusMessage" style="margin-top: 20px;"></div>
+                </div>
+            `;
+            updateStatus("Bienvenido. Elija una opción.", 'info');
+        }
+
+        function iniciarFlujoRecoleccion() {
             const contenedor = document.getElementById("pantalla5");
             contenedor.innerHTML = `
                 <div class="card">
@@ -233,6 +246,7 @@
                     <div id="statusMessage"></div>
                     <input type="text" id="empleadoInput" placeholder="Escanear gafete">
                     ${isMobile ? `<button id="btnEscEmpleado" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <button onclick="mostrarPantallaInicio()" class="btn-secondary">⬅️ Regresar</button>
                 </div>
             `;
 
@@ -248,7 +262,37 @@
 
             if (isMobile) {
                 document.getElementById("btnEscEmpleado").addEventListener("click", () => {
-                    iniciarEscaneo("empleado");
+                    iniciarEscaneo("empleadoRecoleccion");
+                });
+            }
+        }
+
+        function iniciarFlujoConfirmacion() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>✅ Confirmación de Tarima</h2>
+                    <p>Paso 1: Escanee su gafete para registrarse como confirmador.</p>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="confirmadorInput" placeholder="Escanear gafete">
+                    ${isMobile ? `<button id="btnEscConfirmador" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <button onclick="mostrarPantallaInicio()" class="btn-secondary">⬅️ Regresar</button>
+                </div>
+            `;
+            updateStatus("Esperando escaneo de gafete...", 'info');
+            const input = document.getElementById("confirmadorInput");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    confirmadorActual = input.value.trim();
+                    input.value = "";
+                    updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
+                }
+            });
+
+            if (isMobile) {
+                document.getElementById("btnEscConfirmador").addEventListener("click", () => {
+                    iniciarEscaneo("confirmador");
                 });
             }
         }
@@ -259,14 +303,13 @@
 
             contenedor.innerHTML = `
                 <div class="card">
-                    <h2>📦 Recolección & Confirmación</h2>
+                    <h2>📦 Recolección</h2>
                     <h3>Empleado: <b>${empleadoActual}</b></h3>
                     <h4>Resumen de Turno (${turnoActual})</h4>
                     <div id="resumenTurno" style="padding: 10px; background: #2c2c2e; border-radius: 8px;">
                         Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
                     </div>
                     <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
-                    <button onclick="mostrarPantallaConfirmacion()" class="btn-orange">✅ Confirmación</button>
                     <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
                     <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
                     <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
@@ -326,17 +369,17 @@
 
                 const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview', constraints);
                 
-                if (modo === "empleado") {
+                if (modo === "empleadoRecoleccion") {
                     empleadoActual = result.text.trim();
                     updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
                     setTimeout(() => mostrarPantallaPrincipal(), 1500);
-                } else if (modo === "caja") {
-                    procesarEscaneo(result.text.trim(), currentTarima);
                 } else if (modo === "confirmador") {
                     confirmadorActual = result.text.trim();
                     updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
-                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500); // Cambio aquí
-                } else if (modo === "cajaConfirmacion") { // Cambio aquí
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
+                } else if (modo === "caja") {
+                    procesarEscaneo(result.text.trim(), currentTarima);
+                } else if (modo === "cajaConfirmacion") {
                     buscarTarimaPorCaja(result.text.trim());
                 }
             } catch (err) {
@@ -728,41 +771,11 @@
             cantidadPiezasActual = null;
             confirmadorActual = null;
             tarimaAConfirmar = null;
-            mostrarPantallaRecoleccion();
+            mostrarPantallaInicio();
             updateStatus("Sesión cerrada. Escanee su gafete para iniciar.", 'info');
         }
 
         // --- FUNCIONES DE CONFIRMACIÓN ---
-
-        function mostrarPantallaConfirmacion() {
-            const contenedor = document.getElementById("pantalla5");
-            contenedor.innerHTML = `
-                <div class="card">
-                    <h2>✅ Confirmación de Tarima</h2>
-                    <p>Paso 1: Escanee su gafete para registrarse como confirmador.</p>
-                    <div id="statusMessage"></div>
-                    <input type="text" id="confirmadorInput" placeholder="Escanear gafete">
-                    ${isMobile ? `<button id="btnEscConfirmador" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
-                    <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
-                </div>
-            `;
-            updateStatus("Esperando escaneo de gafete...", 'info');
-            const input = document.getElementById("confirmadorInput");
-            input.addEventListener("keypress", function(e) {
-                if (e.key === "Enter") {
-                    confirmadorActual = input.value.trim();
-                    input.value = "";
-                    updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
-                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500); // Cambio aquí
-                }
-            });
-
-            if (isMobile) {
-                document.getElementById("btnEscConfirmador").addEventListener("click", () => {
-                    iniciarEscaneo("confirmador");
-                });
-            }
-        }
 
         function mostrarPantallaConfirmacionCaja() {
             const contenedor = document.getElementById("pantalla5");
@@ -774,7 +787,7 @@
                     <div id="statusMessage"></div>
                     <input type="text" id="cajaConfirmacionInput" placeholder="Escanear BX-XXX">
                     ${isMobile ? `<button id="btnEscCajaConf" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
-                    <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
+                    <button onclick="iniciarFlujoConfirmacion()" class="btn-secondary">⬅️ Regresar</button>
                 </div>
             `;
             updateStatus("Esperando escaneo de caja...", 'info');
@@ -858,7 +871,7 @@
                     <h4>Cajas pendientes</h4>
                     <ul id="listaCajasConfirmacion"></ul>
                     <button onclick="terminarConfirmacion('${tarimaData.id}')" class="btn-green">✅ Finalizar Confirmación</button>
-                    <button onclick="mostrarPantallaPrincipal()" class="btn-danger">❌ Cancelar</button>
+                    <button onclick="iniciarFlujoConfirmacion()" class="btn-danger">❌ Cancelar</button>
                 </div>
             `;
             updateStatus("Escanear el código de cada caja para confirmar.", 'info');
@@ -940,7 +953,7 @@
                     updateStatus("✅ Tarima confirmada con éxito. Proceso finalizado.", 'success');
                     tarimaAConfirmar = null;
                     confirmadorActual = null;
-                    setTimeout(() => mostrarPantallaPrincipal(), 2000);
+                    setTimeout(() => mostrarPantallaInicio(), 2000);
                 }).catch(error => {
                     console.error("Error al finalizar la tarima:", error);
                     updateStatus("❌ Error al finalizar. Intente de nuevo.", 'error');
@@ -964,7 +977,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            mostrarPantallaRecoleccion();
+            mostrarPantallaInicio();
             document.getElementById('closeScannerBtn').addEventListener('click', detenerCamara);
         });
 
