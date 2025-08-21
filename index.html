@@ -391,6 +391,7 @@ function mostrarFormularioTarima(idTarima) {
       <h4>Cajas registradas</h4>
       <ul id="listaCajas"></ul>
       <button onclick="terminarRegistroTarima('${idTarima}')" class="btn-orange">✅ Terminar Registro</button>
+      <button onclick="cancelarCreacionTarima('${idTarima}')" class="btn-danger">❌ Cancelar</button>
     </div>
   `;
   updateStatus("Escanear el código de cantidad (1, 5, 6, 12, 24, 34) para iniciar.", 'info');
@@ -403,6 +404,21 @@ function mostrarFormularioTarima(idTarima) {
 
   configurarEscaneo(idTarima);
   actualizarResumenTarima(idTarima);
+}
+
+// NUEVA FUNCIÓN para cancelar la creación de la tarima
+function cancelarCreacionTarima(idTarima) {
+    if (confirm("¿Está seguro de que desea cancelar? Se eliminará esta tarima y todos los datos que haya capturado en ella.")) {
+        db.ref(`tarimas/${idTarima}`).remove()
+            .then(() => {
+                updateStatus("✅ Creación de tarima cancelada y eliminada.", 'success');
+                mostrarPantallaPrincipal();
+            })
+            .catch(error => {
+                console.error("Error al cancelar la tarima:", error);
+                updateStatus("❌ Error al cancelar. Intente de nuevo.", 'error');
+            });
+    }
 }
 
 function procesarEscaneo(valor, idTarima) {
@@ -420,7 +436,7 @@ function procesarEscaneo(valor, idTarima) {
   }
 
   // Paso 2: Escanear BX
-  // **NUEVA VALIDACIÓN: Verifica si el código escaneado empieza con 'BX'**
+  // **Validación: Verifica si el código escaneado empieza con 'BX'**
   if (!valor.startsWith('BX')) {
     updateStatus("❌ Error: El código de caja debe empezar con 'BX'. Caja no agregada.", 'error');
     input.value = "";
