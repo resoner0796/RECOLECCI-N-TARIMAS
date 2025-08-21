@@ -319,23 +319,13 @@ async function iniciarEscaneo(tipo) {
   updateStatus("Cámara activa. Escaneando...", 'info');
 
   try {
-    const videoInputDevices = await codeReader.getVideoInputDevices();
-    let selectedDeviceId = null;
+    const constraints = {
+      video: {
+        facingMode: "environment" // Forzar el uso de la cámara trasera
+      }
+    };
 
-    // Busca la cámara trasera de forma más confiable
-    const rearCamera = videoInputDevices.find(device =>
-      device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear') || device.label.toLowerCase().includes('environment')
-    );
-
-    if (rearCamera) {
-      selectedDeviceId = rearCamera.deviceId;
-    } else if (videoInputDevices.length > 0) {
-      selectedDeviceId = videoInputDevices[0].deviceId;
-    } else {
-      throw new Error('No se encontraron dispositivos de cámara.');
-    }
-
-    const result = await codeReader.decodeOnceFromVideoDevice(selectedDeviceId, 'preview');
+    const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview', constraints);
 
     if (modo === "empleado") {
       empleadoActual = result.text.trim();
@@ -346,7 +336,7 @@ async function iniciarEscaneo(tipo) {
     }
   } catch (err) {
     console.error("Error al iniciar la cámara:", err);
-    updateStatus("❌ No se pudo iniciar la cámara. Verifique que los permisos estén habilitados y que sea un dispositivo móvil.", 'error');
+    updateStatus("❌ No se pudo iniciar la cámara. Verifique que los permisos estén habilitados.", 'error');
   } finally {
     detenerCamara();
   }
@@ -459,7 +449,7 @@ function procesarEscaneo(valor, idTarima) {
   }
 
   if (cantidadPiezasActual === null) {
-    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 12, 24, 32).", 'error');
+    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 6, 12, 24, 34).", 'error');
     input.value = "";
     return;
   }
@@ -535,7 +525,8 @@ function configurarEscaneo(idTarima) {
 
 function actualizarResumenTarima(idTarima) {
   db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
-    let totalCajas = 0;
+    const cajas = snapshot.val();
+    const totalCajas = cajas ? Object.keys(cajas).length : 0;
     let totalPiezas = 0;
     let lista = "";
     const cajasPorOrden = {};
@@ -543,7 +534,6 @@ function actualizarResumenTarima(idTarima) {
     snapshot.forEach(cajaSnapshot => {
       const caja = cajaSnapshot.val();
       const cajaId = cajaSnapshot.key;
-      totalCajas++;
       totalPiezas += caja.cantidadPiezas || 0;
 
       const orden = caja.numeroOrden;
@@ -593,7 +583,8 @@ function eliminarCaja(idTarima, idCaja) {
 
 function terminarRegistroTarima(idTarima) {
   db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
-    const totalCajas = snapshot.exists() ? snapshot.size : 0;
+    const cajas = snapshot.val();
+    const totalCajas = cajas ? Object.keys(cajas).length : 0;
     const cajasAInspeccionar = Math.ceil(totalCajas * 0.20); // Calcula el 20% y redondea hacia arriba
 
     mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar);
