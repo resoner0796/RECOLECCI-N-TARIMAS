@@ -384,7 +384,7 @@ function mostrarFormularioTarima(idTarima) {
       <h3>Tarima: ${idTarima}</h3>
       <h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual || 'Sin seleccionar'}</span></h4>
       <div id="statusMessage"></div>
-      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5)">
+      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 12, 24, 32)">
       ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
       <h4>Resumen</h4>
       <div id="resumenTarima">Cajas: 0 | Piezas: 0</div>
