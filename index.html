@@ -210,7 +210,8 @@ let currentTarima = null;
 let codeReader = null;
 let scanning = false;
 let modo = "";
-let cantidadPiezasActual = null; // Nueva variable para guardar la cantidad
+let cantidadPiezasActual = null;
+let cajasConfirmadas = {}; // Objeto para llevar el registro de cajas confirmadas
 
 const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -264,8 +265,10 @@ function mostrarPantallaPrincipal() {
           Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
       </div>
       <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
+      <button onclick="mostrarPantallaConfirmacion()" class="btn-primary">✅ Confirmación</button>
       <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
       <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
+      <button onclick="buscarBx()" class="btn-info">🔍 Buscar BX</button>
       <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
       <div id="tarimaContainer"></div>
     </div>
@@ -298,12 +301,9 @@ function determinarTurno() {
   const hours = now.getHours();
   const minutes = now.getMinutes();
 
-  // Turno 1: 06:30 a 18:29
   if ((hours > 6 || (hours === 6 && minutes >= 30)) && (hours < 18 || (hours === 18 && minutes < 30))) {
     return "Turno 1";
-  }
-  // Turno 2: 18:30 a 06:29 del siguiente día
-  else {
+  } else {
     return "Turno 2";
   }
 }
@@ -314,10 +314,10 @@ async function iniciarEscaneo(tipo) {
   scanning = true;
   const scannerModal = document.getElementById("scannerModal");
   scannerModal.classList.add('active');
-
+  
   codeReader = new ZXing.BrowserBarcodeReader();
   updateStatus("Cámara activa. Escaneando...", 'info');
-
+  
   try {
     const constraints = {
       video: {
@@ -326,13 +326,19 @@ async function iniciarEscaneo(tipo) {
     };
 
     const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview', constraints);
-
+    
     if (modo === "empleado") {
       empleadoActual = result.text.trim();
       updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
       setTimeout(() => mostrarPantallaPrincipal(), 1500);
     } else if (modo === "caja") {
       procesarEscaneo(result.text.trim(), currentTarima);
+    } else if (modo === "tarimaConfirmar") {
+      iniciarConfirmacionDeTarima(result.text.trim());
+    } else if (modo === "cajaConfirmar") {
+      procesarEscaneoConfirmacion(result.text.trim(), currentTarima);
+    } else if (modo === "buscarBx") {
+        buscarBxPorCodigo(result.text.trim());
     }
   } catch (err) {
     console.error("Error al iniciar la cámara:", err);
@@ -365,7 +371,7 @@ function crearNuevaTarima() {
 
     const idTarima = "TAR-" + String(nextIdNumber).padStart(3, '0');
     currentTarima = idTarima;
-    cantidadPiezasActual = null; // Reiniciar la cantidad al crear una nueva tarima
+    cantidadPiezasActual = null;
 
     db.ref("tarimas/" + idTarima).set({
       id: idTarima,
@@ -411,7 +417,6 @@ function mostrarFormularioTarima(idTarima) {
   actualizarResumenTarima(idTarima);
 }
 
-// NUEVA FUNCIÓN para cancelar la creación de la tarima
 function cancelarCreacionTarima(idTarima) {
     if (confirm("¿Está seguro de que desea cancelar? Se eliminará esta tarima y todos los datos que haya capturado en ella.")) {
         db.ref(`tarimas/${idTarima}`).remove()
@@ -431,7 +436,6 @@ function procesarEscaneo(valor, idTarima) {
   const cantidadesValidas = [1, 5, 6, 12, 24, 34];
   const cantidadInput = parseInt(valor);
 
-  // Paso 1: Escanear cantidad
   if (cantidadesValidas.includes(cantidadInput)) {
     cantidadPiezasActual = cantidadInput;
     document.getElementById("cantidadActual").textContent = cantidadPiezasActual;
@@ -440,8 +444,6 @@ function procesarEscaneo(valor, idTarima) {
     return;
   }
 
-  // Paso 2: Escanear BX
-  // **Validación: Verifica si el código escaneado empieza con 'BX'**
   if (!valor.startsWith('BX')) {
     updateStatus("❌ Error: El código de caja debe empezar con 'BX'. Caja no agregada.", 'error');
     input.value = "";
@@ -489,12 +491,12 @@ function procesarEscaneo(valor, idTarima) {
     const cajaTemp = {
       codigoCaja: codigoCaja,
       numeroOrden: numeroOrden,
-      cantidadPiezas: cantidadPiezasActual, // Usar la cantidad del estado
+      cantidadPiezas: cantidadPiezasActual,
       empleadoId: empleadoActual,
       turno: determinarTurno(),
       timestamp: new Date().toISOString()
     };
-
+    
     const cajaId = db.ref(`tarimas/${idTarima}/cajas`).push().key;
 
     db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp)
@@ -563,7 +565,7 @@ function actualizarResumenTarima(idTarima) {
     document.getElementById("resumenTarima").innerText =
       `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
     document.getElementById("listaCajas").innerHTML = lista;
-    actualizarResumenTurno(); // Asegura que el resumen del turno se actualice
+    actualizarResumenTurno();
   });
 }
 
@@ -585,7 +587,7 @@ function terminarRegistroTarima(idTarima) {
   db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
     const cajas = snapshot.val();
     const totalCajas = cajas ? Object.keys(cajas).length : 0;
-    const cajasAInspeccionar = Math.ceil(totalCajas * 0.20); // Calcula el 20% y redondea hacia arriba
+    const cajasAInspeccionar = Math.ceil(totalCajas * 0.20);
 
     mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar);
     mostrarPantallaPrincipal();
@@ -640,13 +642,15 @@ function mostrarTarimasCreadas() {
         totalCajas = Object.keys(tarima.cajas).length;
         for (let key in tarima.cajas) {
           const caja = tarima.cajas[key];
-          cajasHtml += `<li>Caja: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas}</li>`;
+          const confirmada = caja.confirmada ? '✅' : '❌';
+          cajasHtml += `<li>Caja: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas} | Confirmada: ${confirmada}</li>`;
         }
       }
 
+      const tarimaConfirmada = tarima.confirmacion ? '✅' : '❌';
       lista += `
         <li>
-          Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Turno: ${tarima.turno} | Cajas: ${totalCajas}
+          Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Turno: ${tarima.turno} | Cajas: ${totalCajas} | Confirmada: ${tarimaConfirmada}
           <button onclick="toggleCajas('cajas-${tarima.id}')" class="btn-secondary list-item-btn">Ver cajas</button>
           <br><small>Creada el ${fecha}</small>
           <ul id="cajas-${tarima.id}" style="display:none;">
@@ -737,6 +741,281 @@ function cerrarSesion() {
   mostrarPantallaRecoleccion();
   updateStatus("Sesión cerrada. Escanee su gafete para iniciar.", 'info');
 }
+
+// ------ FUNCIONALIDAD DE CONFIRMACIÓN ------
+function mostrarPantallaConfirmacion() {
+  const contenedor = document.getElementById("pantalla5");
+  contenedor.innerHTML = `
+    <div class="card">
+      <h2>✅ Confirmación de Tarimas</h2>
+      <p>Escanee su número de confirmador:</p>
+      <div id="statusMessage"></div>
+      <input type="text" id="confirmadorInput" placeholder="Escanear gafete">
+      ${isMobile ? `<button id="btnEscConfirmador" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+      <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
+    </div>
+  `;
+  updateStatus("Escanee el gafete del confirmador.", 'info');
+
+  const input = document.getElementById("confirmadorInput");
+  input.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      empleadoActual = input.value.trim();
+      input.value = "";
+      updateStatus(`¡Hola, ${empleadoActual}! Ahora escanee la tarima a confirmar.`, 'success');
+      setTimeout(() => mostrarFormularioConfirmacion(), 1500);
+    }
+  });
+
+  if (isMobile) {
+    document.getElementById("btnEscConfirmador").addEventListener("click", () => {
+      iniciarEscaneo("empleado");
+    });
+  }
+}
+
+function mostrarFormularioConfirmacion() {
+  const contenedor = document.getElementById("pantalla5");
+  cajasConfirmadas = {}; // Reiniciar el estado de cajas confirmadas
+
+  contenedor.innerHTML = `
+    <div class="card">
+      <h2>✅ Confirmación de Tarima</h2>
+      <div id="statusMessage"></div>
+      <input type="text" id="codigoTarima" placeholder="Escanear Tarima (Ej: TAR-001)">
+      ${isMobile ? `<button id="btnEscTarima" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+      <button onclick="mostrarPantallaConfirmacion()" class="btn-secondary">⬅️ Regresar</button>
+    </div>
+  `;
+  updateStatus("Escanee la tarima a confirmar.", 'info');
+
+  const input = document.getElementById("codigoTarima");
+  input.addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+      iniciarConfirmacionDeTarima(input.value.trim());
+    }
+  });
+
+  if (isMobile) {
+    document.getElementById("btnEscTarima").addEventListener("click", () => {
+      iniciarEscaneo("tarimaConfirmar");
+    });
+  }
+}
+
+function iniciarConfirmacionDeTarima(idTarima) {
+  if (!idTarima.startsWith('TAR-')) {
+    updateStatus("❌ Error: Código de tarima inválido.", 'error');
+    return;
+  }
+
+  db.ref(`tarimas/${idTarima}`).once("value").then(snapshot => {
+    if (!snapshot.exists()) {
+      updateStatus("❌ Error: La tarima no existe.", 'error');
+      return;
+    }
+
+    const tarima = snapshot.val();
+    if (tarima.confirmacion) {
+      updateStatus("❌ Error: Esta tarima ya ha sido confirmada.", 'error');
+      return;
+    }
+
+    currentTarima = idTarima;
+    const contenedor = document.getElementById("pantalla5");
+    contenedor.innerHTML = `
+      <div class="card">
+        <h3>Tarima a Confirmar: ${idTarima}</h3>
+        <p>Recolector: ${tarima.empleadoId}</p>
+        <div id="statusMessage"></div>
+        <input type="text" id="codigoCajaConf" placeholder="Escanear BX de la tarima">
+        ${isMobile ? `<button id="btnEscCajaConf" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+        <h4>Resumen de Confirmación</h4>
+        <div id="resumenConf">Cajas registradas: ${tarima.cajas ? Object.keys(tarima.cajas).length : 0} | Confirmadas: 0</div>
+        <ul id="listaCajasConf"></ul>
+        <button onclick="finalizarConfirmacion('${idTarima}')" class="btn-orange">✅ Finalizar Confirmación</button>
+        <button onclick="mostrarPantallaConfirmacion()" class="btn-secondary">⬅️ Cancelar</button>
+      </div>
+    `;
+    updateStatus("Ahora escanee cada una de las cajas de la tarima.", 'info');
+
+    if (isMobile) {
+      document.getElementById("btnEscCajaConf").addEventListener("click", () => {
+        iniciarEscaneo("cajaConfirmar");
+      });
+    }
+
+    const input = document.getElementById("codigoCajaConf");
+    input.addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        procesarEscaneoConfirmacion(input.value.trim(), idTarima);
+      }
+    });
+
+  }).catch(error => {
+    console.error("Error al obtener datos de la tarima:", error);
+    updateStatus("❌ Error al cargar la tarima. Intente de nuevo.", 'error');
+  });
+}
+
+function procesarEscaneoConfirmacion(codigoCaja, idTarima) {
+  const input = document.getElementById("codigoCajaConf");
+  if (!codigoCaja.startsWith('BX')) {
+    updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
+    input.value = "";
+    return;
+  }
+
+  db.ref(`tarimas/${idTarima}/cajas`).orderByChild("codigoCaja").equalTo(codigoCaja).once("value").then(snapshot => {
+    if (!snapshot.exists()) {
+      updateStatus(`❌ Error: El BX ${codigoCaja} no se encuentra en la tarima ${idTarima}.`, 'error');
+      input.value = "";
+      return;
+    }
+
+    const cajaId = Object.keys(snapshot.val())[0];
+    const caja = snapshot.val()[cajaId];
+
+    if (caja.confirmada) {
+      updateStatus(`❌ Error: El BX ${codigoCaja} ya fue confirmado.`, 'error');
+      input.value = "";
+      return;
+    }
+    
+    db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).update({ confirmada: true })
+    .then(() => {
+      updateStatus(`✅ Caja ${codigoCaja} confirmada correctamente.`, 'success');
+      cajasConfirmadas[codigoCaja] = true;
+      actualizarResumenConfirmacion(idTarima);
+    })
+    .catch(error => {
+      console.error("Error al actualizar la caja:", error);
+      updateStatus("❌ Error al confirmar la caja. Intente de nuevo.", 'error');
+    });
+
+  }).catch(error => {
+    console.error("Error al verificar BX para confirmación:", error);
+    updateStatus("❌ Error al verificar el BX. Intente de nuevo.", 'error');
+  });
+
+  input.value = "";
+}
+
+function actualizarResumenConfirmacion(idTarima) {
+  db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
+    const totalCajas = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+    let confirmadasCount = 0;
+    let lista = "";
+
+    snapshot.forEach(cajaSnapshot => {
+      const caja = cajaSnapshot.val();
+      if (caja.confirmada) {
+        confirmadasCount++;
+        lista += `<li>✅ ${caja.codigoCaja}</li>`;
+      } else {
+        lista += `<li style="color: #ff4d4d;">❌ ${caja.codigoCaja} (Pendiente)</li>`;
+      }
+    });
+    
+    document.getElementById("resumenConf").innerText =
+      `Cajas registradas: ${totalCajas} | Confirmadas: ${confirmadasCount}`;
+    document.getElementById("listaCajasConf").innerHTML = lista;
+  });
+}
+
+function finalizarConfirmacion(idTarima) {
+    if (confirm("¿Desea finalizar la confirmación de esta tarima?")) {
+        db.ref(`tarimas/${idTarima}`).update({
+            confirmacion: {
+                confirmadorId: empleadoActual,
+                fechaConfirmacion: new Date().toISOString()
+            }
+        })
+        .then(() => {
+            alert("Confirmación finalizada. La tarima ha sido marcada como confirmada.");
+            mostrarPantallaPrincipal();
+        })
+        .catch(error => {
+            console.error("Error al finalizar la confirmación:", error);
+            alert("Hubo un error al finalizar la confirmación.");
+        });
+    }
+}
+
+// ------ FUNCIONALIDAD DE BÚSQUEDA DE BX ------
+function buscarBx() {
+    const contenedor = document.getElementById("pantalla5");
+    contenedor.innerHTML = `
+        <div class="card">
+            <h2>🔍 Buscar BX</h2>
+            <p>Escanee o escriba el código del BX para ver su estado.</p>
+            <div id="statusMessage"></div>
+            <input type="text" id="buscarBxInput" placeholder="Escanear o escribir BX">
+            ${isMobile ? `<button id="btnEscBuscar" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+            <div id="resultadoBusqueda" style="padding: 10px; margin-top: 15px; border-radius: 8px; background: #2c2c2e;"></div>
+            <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
+        </div>
+    `;
+    updateStatus("Listo para escanear un BX.", 'info');
+
+    const input = document.getElementById("buscarBxInput");
+    input.addEventListener("keypress", function(e) {
+        if (e.key === "Enter") {
+            buscarBxPorCodigo(input.value.trim());
+        }
+    });
+
+    if (isMobile) {
+        document.getElementById("btnEscBuscar").addEventListener("click", () => {
+            iniciarEscaneo("buscarBx");
+        });
+    }
+}
+
+function buscarBxPorCodigo(codigo) {
+    const resultadoDiv = document.getElementById("resultadoBusqueda");
+    resultadoDiv.innerHTML = "Buscando...";
+
+    if (!codigo.startsWith('BX')) {
+        resultadoDiv.innerHTML = `<p style="color: #ff4d4d;">Código inválido. Debe empezar con 'BX'.</p>`;
+        return;
+    }
+
+    db.ref("tarimas").once("value").then(snapshot => {
+        let bxEncontrado = null;
+        snapshot.forEach(tarimaSnapshot => {
+            const tarima = tarimaSnapshot.val();
+            if (tarima.cajas) {
+                for (let key in tarima.cajas) {
+                    if (tarima.cajas[key].codigoCaja === codigo) {
+                        bxEncontrado = {
+                            tarimaId: tarima.id,
+                            recolectorId: tarima.empleadoId,
+                            confirmada: tarima.cajas[key].confirmada || false
+                        };
+                        return true;
+                    }
+                }
+            }
+        });
+
+        if (bxEncontrado) {
+            const estadoConfirmacion = bxEncontrado.confirmada ? '<b style="color: #4CAF50;">CONFIRMADO</b> ✅' : '<b style="color: #ffeb3b;">PENDIENTE DE CONFIRMAR</b> ❌';
+            resultadoDiv.innerHTML = `
+                <p><b>BX Encontrado:</b> ${codigo}</p>
+                <p><b>Tarima:</b> ${bxEncontrado.tarimaId}</p>
+                <p><b>Recolector:</b> ${bxEncontrado.recolectorId}</p>
+                <p><b>Estado:</b> ${estadoConfirmacion}</p>
+            `;
+        } else {
+            resultadoDiv.innerHTML = `<p style="color: #ff4d4d;">El BX ${codigo} no fue encontrado en ninguna tarima.</p>`;
+        }
+    }).catch(error => {
+        console.error("Error al buscar BX:", error);
+        resultadoDiv.innerHTML = `<p style="color: #ff4d4d;">Hubo un error al buscar el BX. Intente de nuevo.</p>`;
+    });
+}
+
 
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
