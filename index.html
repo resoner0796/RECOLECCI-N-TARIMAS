@@ -1,761 +1,949 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Recolección - Test</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="manifest" href="manifest.json">
-  <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #000000;
-      color: #FFFFFF;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      flex-direction: column;
-    }
-    .card { 
-      background: #1c1c1e;
-      padding: 20px;
-      margin: 20px auto;
-      max-width: 500px;
-      width: 90%;
-      border-radius: 15px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-      text-align: center;
-    }
-    input { 
-      padding: 12px;
-      width: calc(100% - 24px);
-      margin: 10px 0;
-      font-size: 16px;
-      border-radius: 10px;
-      border: 1px solid #3a3a3c;
-      background: #2c2c2e;
-      color: #FFFFFF;
-      box-sizing: border-box;
-    }
-    input::placeholder {
-      color: #8e8e93;
-    }
-    button { 
-      padding: 15px 20px;
-      margin: 10px 0;
-      cursor: pointer;
-      font-size: 16px;
-      border-radius: 10px;
-      border: none;
-      width: 100%;
-      font-weight: bold;
-      transition: background-color 0.3s ease;
-    }
-    button.btn-primary { 
-        background-color: #007AFF;
-        color: #FFFFFF;
-    }
-    button.btn-green { 
-        background-color: #4CAF50;
-        color: #FFFFFF;
-    }
-    button.btn-orange { 
-        background-color: #ffc107;
-        color: #000000;
-    }
-    button.btn-danger {
-        background-color: #ff3b30;
-        color: #FFFFFF;
-    }
-    button.btn-secondary {
-        background-color: #6c757d;
-        color: #FFFFFF;
-    }
-    button:active {
-      filter: brightness(0.9);
-    }
-    h2, h3, h4 { margin: 10px 0; }
-    ul { padding-left: 0; list-style: none; }
-    li { 
-      margin-bottom: 10px;
-      background: #2c2c2e;
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 14px;
-      text-align: left;
-      overflow: hidden;
-      word-wrap: break-word;
-    }
-    small { color: #8e8e93; }
-    #statusMessage { 
-      padding: 10px; 
-      margin: 10px 0; 
-      border-radius: 6px; 
-      font-weight: bold; 
-      text-align: center; 
-    }
-    .status-success { background-color: #34c759; color: #FFFFFF; }
-    .status-info { background-color: #5ac8fa; color: #FFFFFF; }
-    .status-error { background-color: #ff3b30; color: #FFFFFF; }
-    
-    .list-item-btn {
-        width: auto;
-        padding: 5px 10px;
-        margin: 0;
-        float: right;
-    }
-    .edit-delete-btns {
-      float: right;
-      display: inline-block;
-    }
-    .edit-delete-btns button {
-      width: auto;
-      display: inline-block;
-      padding: 5px 10px;
-      margin: 0 2px;
-    }
-
-    /* Estilos del modal y el marco de escaneo */
-    #scannerModal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.85);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 100;
-        flex-direction: column;
-    }
-    #scannerModal.active {
-        display: flex;
-    }
-    .scanner-frame-container {
-        position: relative;
-        width: 90%;
-        max-width: 400px;
-        aspect-ratio: 16 / 9;
-        border: 2px solid #007AFF;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    #preview {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .scanner-frame {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
-    }
-    .scanner-frame::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background-color: #ff3b30;
-        transform: translateY(-50%);
-        animation: scan-line 2s infinite;
-    }
-    @keyframes scan-line {
-        0% { top: 0; }
-        50% { top: 100%; }
-        100% { top: 0; }
-    }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <meta charset="UTF-8">
+    <title>Recolección - Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #000000;
+            color: #FFFFFF;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        .card { 
+            background: #1c1c1e;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 500px;
+            width: 90%;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        input { 
+            padding: 12px;
+            width: calc(100% - 24px);
+            margin: 10px 0;
+            font-size: 16px;
+            border-radius: 10px;
+            border: 1px solid #3a3a3c;
+            background: #2c2c2e;
+            color: #FFFFFF;
+            box-sizing: border-box;
+        }
+        input::placeholder {
+            color: #8e8e93;
+        }
+        button { 
+            padding: 15px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 10px;
+            border: none;
+            width: 100%;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        button.btn-primary { 
+            background-color: #007AFF;
+            color: #FFFFFF;
+        }
+        button.btn-green { 
+            background-color: #4CAF50;
+            color: #FFFFFF;
+        }
+        button.btn-orange { 
+            background-color: #ffc107;
+            color: #000000;
+        }
+        button.btn-danger {
+            background-color: #ff3b30;
+            color: #FFFFFF;
+        }
+        button.btn-secondary {
+            background-color: #6c757d;
+            color: #FFFFFF;
+        }
+        button:active {
+            filter: brightness(0.9);
+        }
+        h2, h3, h4 { margin: 10px 0; }
+        ul { padding-left: 0; list-style: none; }
+        li { 
+            margin-bottom: 10px;
+            background: #2c2c2e;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            text-align: left;
+            overflow: hidden;
+            word-wrap: break-word;
+        }
+        small { color: #8e8e93; }
+        #statusMessage { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 6px; 
+            font-weight: bold; 
+            text-align: center; 
+        }
+        .status-success { background-color: #34c759; color: #FFFFFF; }
+        .status-info { background-color: #5ac8fa; color: #FFFFFF; }
+        .status-error { background-color: #ff3b30; color: #FFFFFF; }
+        
+        .list-item-btn {
+            width: auto;
+            padding: 5px 10px;
+            margin: 0;
+            float: right;
+        }
+        .edit-delete-btns {
+            float: right;
+            display: inline-block;
+        }
+        .edit-delete-btns button {
+            width: auto;
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 0 2px;
+        }
+        
+        /* Estilos del modal y el marco de escaneo */
+        #scannerModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            flex-direction: column;
+        }
+        #scannerModal.active {
+            display: flex;
+        }
+        .scanner-frame-container {
+            position: relative;
+            width: 90%;
+            max-width: 400px;
+            aspect-ratio: 16 / 9;
+            border: 2px solid #007AFF;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .scanner-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7);
+        }
+        .scanner-frame::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #ff3b30;
+            transform: translateY(-50%);
+            animation: scan-line 2s infinite;
+        }
+        @keyframes scan-line {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
 
-  <div id="pantalla5"></div>
-  <div id="scannerModal">
-    <div class="scanner-frame-container">
-      <video id="preview"></video>
-      <div class="scanner-frame"></div>
+    <div id="pantalla5"></div>
+    <div id="scannerModal">
+        <div class="scanner-frame-container">
+            <video id="preview"></video>
+            <div class="scanner-frame"></div>
+        </div>
+        <button id="closeScannerBtn" class="btn-danger" style="width: 90%; max-width: 400px; margin-top: 20px;">❌ Cerrar</button>
     </div>
-    <button id="closeScannerBtn" class="btn-danger" style="width: 90%; max-width: 400px; margin-top: 20px;">❌ Cerrar</button>
-  </div>
-<script>
-  
-// Evitar el doble toque para hacer zoom en dispositivos móviles
-document.addEventListener('dblclick', function(e) {
-  e.preventDefault();
-}, { passive: false });
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCPTEu73s2rVIm2VsdTk59kVIOyi1jeyu8",
-  authDomain: "panel-logistica.firebaseapp.com",
-  databaseURL: "https://panel-logistica-default-rtdb.firebaseio.com",
-  projectId: "panel-logistica",
-  storageBucket: "panel-logistica.appspot.com",
-  messagingSenderId: "38365879945",
-  appId: "1:38365879945:web:e2f3590fe77f013dba3058"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let empleadoActual = null;
-let currentTarima = null;
-let codeReader = null;
-let scanning = false;
-let modo = "";
-let cantidadPiezasActual = null; // Nueva variable para guardar la cantidad
-
-const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-function updateStatus(message, type) {
-  const statusDiv = document.getElementById("statusMessage");
-  if (statusDiv) {
-    statusDiv.textContent = message;
-    statusDiv.className = `status-${type}`;
-  }
-}
-
-function mostrarPantallaRecoleccion() {
-  const contenedor = document.getElementById("pantalla5");
-  contenedor.innerHTML = `
-    <div class="card">
-      <h2>📦 Recolección</h2>
-      <p>Escanee su número de empleado:</p>
-      <div id="statusMessage"></div>
-      <input type="text" id="empleadoInput" placeholder="Escanear gafete">
-      ${isMobile ? `<button id="btnEscEmpleado" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
-    </div>
-  `;
-
-  const input = document.getElementById("empleadoInput");
-  input.addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
-      empleadoActual = input.value.trim();
-      input.value = "";
-      updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
-      setTimeout(() => mostrarPantallaPrincipal(), 1500);
-    }
-  });
-
-  if (isMobile) {
-    document.getElementById("btnEscEmpleado").addEventListener("click", () => {
-      iniciarEscaneo("empleado");
-    });
-  }
-}
-
-function mostrarPantallaPrincipal() {
-  const contenedor = document.getElementById("pantalla5");
-  const turnoActual = determinarTurno();
-
-  contenedor.innerHTML = `
-    <div class="card">
-      <h2>📦 Recolección</h2>
-      <h3>Empleado: <b>${empleadoActual}</b></h3>
-      <h4>Resumen de Turno (${turnoActual})</h4>
-      <div id="resumenTurno" style="padding: 10px; background: #2c2c2e; border-radius: 8px;">
-          Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
-      </div>
-      <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
-      <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
-      <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
-      <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
-      <div id="tarimaContainer"></div>
-    </div>
-  `;
-
-  actualizarResumenTurno();
-}
-
-function actualizarResumenTurno() {
-  const turnoActual = determinarTurno();
-  db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual).once("value").then(snapshot => {
-    let tarimasCount = 0;
-    let cajasCount = 0;
-    snapshot.forEach(tarimaSnapshot => {
-      const tarima = tarimaSnapshot.val();
-      if (tarima.turno === turnoActual) {
-        tarimasCount++;
-        if (tarima.cajas) {
-          cajasCount += Object.keys(tarima.cajas).length;
-        }
-      }
-    });
-    document.getElementById("tarimasRegistradas").textContent = tarimasCount;
-    document.getElementById("cajasRegistradas").textContent = cajasCount;
-  });
-}
-
-function determinarTurno() {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-
-  // Turno 1: 06:30 a 18:29
-  if ((hours > 6 || (hours === 6 && minutes >= 30)) && (hours < 18 || (hours === 18 && minutes < 30))) {
-    return "Turno 1";
-  }
-  // Turno 2: 18:30 a 06:29 del siguiente día
-  else {
-    return "Turno 2";
-  }
-}
-
-async function iniciarEscaneo(tipo) {
-  if (scanning) return;
-  modo = tipo;
-  scanning = true;
-  const scannerModal = document.getElementById("scannerModal");
-  scannerModal.classList.add('active');
-  
-  codeReader = new ZXing.BrowserBarcodeReader();
-  updateStatus("Cámara activa. Escaneando...", 'info');
-  
-  try {
-    const constraints = {
-      video: {
-        facingMode: "environment" // Forzar el uso de la cámara trasera
-      }
-    };
-
-    const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview', constraints);
+    <script>
     
-    if (modo === "empleado") {
-      empleadoActual = result.text.trim();
-      updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
-      setTimeout(() => mostrarPantallaPrincipal(), 1500);
-    } else if (modo === "caja") {
-      procesarEscaneo(result.text.trim(), currentTarima);
-    }
-  } catch (err) {
-    console.error("Error al iniciar la cámara:", err);
-    updateStatus("❌ No se pudo iniciar la cámara. Verifique que los permisos estén habilitados.", 'error');
-  } finally {
-    detenerCamara();
-  }
-}
+        // Evitar el doble toque para hacer zoom en dispositivos móviles
+        document.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+        }, { passive: false });
 
-function detenerCamara() {
-  if (codeReader) {
-    codeReader.reset();
-  }
-  const scannerModal = document.getElementById("scannerModal");
-  scannerModal.classList.remove('active');
-  scanning = false;
-}
-
-function crearNuevaTarima() {
-  const turno = determinarTurno();
-  db.ref("tarimas").orderByKey().limitToLast(1).once("value").then(snapshot => {
-    let nextIdNumber = 1;
-    if (snapshot.exists()) {
-      const lastTarimaId = Object.keys(snapshot.val())[0];
-      const lastIdNumber = parseInt(lastTarimaId.split('-')[1]);
-      if (!isNaN(lastIdNumber)) {
-        nextIdNumber = lastIdNumber + 1;
-      }
-    }
-
-    const idTarima = "TAR-" + String(nextIdNumber).padStart(3, '0');
-    currentTarima = idTarima;
-    cantidadPiezasActual = null; // Reiniciar la cantidad al crear una nueva tarima
-
-    db.ref("tarimas/" + idTarima).set({
-      id: idTarima,
-      empleadoId: empleadoActual,
-      fechaCreacion: new Date().toISOString(),
-      turno: turno,
-      cajas: {}
-    }).then(() => {
-      mostrarFormularioTarima(idTarima);
-    }).catch(error => {
-      console.error("Error al crear la tarima:", error);
-      updateStatus("❌ Error al crear la tarima. Intente de nuevo.", 'error');
-    });
-  });
-}
-
-function mostrarFormularioTarima(idTarima) {
-  const contenedor = document.getElementById("pantalla5");
-  contenedor.innerHTML = `
-    <div class="card">
-      <h3>Tarima: ${idTarima}</h3>
-      <h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual || 'Sin seleccionar'}</span></h4>
-      <div id="statusMessage"></div>
-      <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 6, 12, 24, 34)">
-      ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
-      <h4>Resumen</h4>
-      <div id="resumenTarima">Cajas: 0 | Piezas: 0</div>
-      <h4>Cajas registradas</h4>
-      <ul id="listaCajas"></ul>
-      <button onclick="terminarRegistroTarima('${idTarima}')" class="btn-orange">✅ Terminar Registro</button>
-      <button onclick="cancelarCreacionTarima('${idTarima}')" class="btn-danger">❌ Cancelar</button>
-    </div>
-  `;
-  updateStatus("Escanear el código de cantidad (1, 5, 6, 12, 24, 34) para iniciar.", 'info');
-
-  if (isMobile) {
-    document.getElementById("btnEscCaja").addEventListener("click", () => {
-      iniciarEscaneo("caja");
-    });
-  }
-
-  configurarEscaneo(idTarima);
-  actualizarResumenTarima(idTarima);
-}
-
-// NUEVA FUNCIÓN para cancelar la creación de la tarima
-function cancelarCreacionTarima(idTarima) {
-    if (confirm("¿Está seguro de que desea cancelar? Se eliminará esta tarima y todos los datos que haya capturado en ella.")) {
-        db.ref(`tarimas/${idTarima}`).remove()
-            .then(() => {
-                updateStatus("✅ Creación de tarima cancelada y eliminada.", 'success');
-                mostrarPantallaPrincipal();
-            })
-            .catch(error => {
-                console.error("Error al cancelar la tarima:", error);
-                updateStatus("❌ Error al cancelar. Intente de nuevo.", 'error');
-            });
-    }
-}
-
-function procesarEscaneo(valor, idTarima) {
-  const input = document.getElementById("codigoCaja");
-  const cantidadesValidas = [1, 5, 6, 12, 24, 34];
-  const cantidadInput = parseInt(valor);
-
-  // Paso 1: Escanear cantidad
-  if (cantidadesValidas.includes(cantidadInput)) {
-    cantidadPiezasActual = cantidadInput;
-    document.getElementById("cantidadActual").textContent = cantidadPiezasActual;
-    updateStatus(`✅ Cantidad establecida a ${cantidadPiezasActual}. Ahora escanee el código BX.`, 'success');
-    input.value = "";
-    return;
-  }
-
-  // Paso 2: Escanear BX
-  // **Validación: Verifica si el código escaneado empieza con 'BX'**
-  if (!valor.startsWith('BX')) {
-    updateStatus("❌ Error: El código de caja debe empezar con 'BX'. Caja no agregada.", 'error');
-    input.value = "";
-    return;
-  }
-
-  if (cantidadPiezasActual === null) {
-    updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 6, 12, 24, 34).", 'error');
-    input.value = "";
-    return;
-  }
-
-  const codigoCaja = valor.trim();
-  const numeroOrden = codigoCaja.substring(2, 12);
-
-  db.ref("tarimas").once("value").then(snapshot => {
-    let bxEncontrado = false;
-    let tarimaAnterior = null;
-    snapshot.forEach(tarimaSnapshot => {
-      const tarima = tarimaSnapshot.val();
-      if (tarima.cajas) {
-        for (let key in tarima.cajas) {
-          if (tarima.cajas[key].codigoCaja === codigoCaja) {
-            bxEncontrado = true;
-            tarimaAnterior = tarima.id;
-            break;
-          }
-        }
-      }
-      if (bxEncontrado) {
-        return true;
-      }
-    });
-
-    if (bxEncontrado) {
-      if (tarimaAnterior === idTarima) {
-        updateStatus("❌ Error: Este BX ya fue agregado a esta tarima.", 'error');
-      } else {
-        updateStatus(`❌ Error: Este BX ya fue agregado a la tarima: ${tarimaAnterior}`, 'error');
-      }
-      input.value = "";
-      return;
-    }
-
-    const cajaTemp = {
-      codigoCaja: codigoCaja,
-      numeroOrden: numeroOrden,
-      cantidadPiezas: cantidadPiezasActual, // Usar la cantidad del estado
-      empleadoId: empleadoActual,
-      turno: determinarTurno(),
-      timestamp: new Date().toISOString()
-    };
-    
-    const cajaId = db.ref(`tarimas/${idTarima}/cajas`).push().key;
-
-    db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp)
-      .then(() => {
-        updateStatus(`📦 Caja ${codigoCaja} (${cantidadPiezasActual} pz) guardada correctamente.`, 'success');
-        actualizarResumenTarima(idTarima);
-      })
-      .catch((error) => {
-        console.error("Error al guardar la caja:", error);
-        updateStatus("❌ Error al guardar la caja. Intenta de nuevo.", 'error');
-      });
-  }).catch(error => {
-    console.error("Error al verificar BX:", error);
-    updateStatus("❌ Error al verificar el BX. Intente de nuevo.", 'error');
-  });
-
-  input.value = "";
-}
-
-function configurarEscaneo(idTarima) {
-  const input = document.getElementById("codigoCaja");
-  input.addEventListener("keypress", function(e) {
-    if (e.key === "Enter") {
-      procesarEscaneo(input.value.trim(), idTarima);
-    }
-  });
-}
-
-function actualizarResumenTarima(idTarima) {
-  db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
-    const cajas = snapshot.val();
-    const totalCajas = cajas ? Object.keys(cajas).length : 0;
-    let totalPiezas = 0;
-    let lista = "";
-    const cajasPorOrden = {};
-
-    snapshot.forEach(cajaSnapshot => {
-      const caja = cajaSnapshot.val();
-      const cajaId = cajaSnapshot.key;
-      totalPiezas += caja.cantidadPiezas || 0;
-
-      const orden = caja.numeroOrden;
-      if (!cajasPorOrden[orden]) {
-        cajasPorOrden[orden] = {
-          totalPiezas: 0,
-          cajas: []
+        const firebaseConfig = {
+            apiKey: "AIzaSyCPTEu73s2rVIm2VsdTk59kVIOyi1jeyu8",
+            authDomain: "panel-logistica.firebaseapp.com",
+            databaseURL: "https://panel-logistica-default-rtdb.firebaseio.com",
+            projectId: "panel-logistica",
+            storageBucket: "panel-logistica.appspot.com",
+            messagingSenderId: "38365879945",
+            appId: "1:38365879945:web:e2f3590fe77f013dba3058"
         };
-      }
-      cajasPorOrden[orden].totalPiezas += caja.cantidadPiezas || 0;
-      cajasPorOrden[orden].cajas.push({ id: cajaId, codigo: caja.codigoCaja });
-    });
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-    for (const orden in cajasPorOrden) {
-      const datos = cajasPorOrden[orden];
-      lista += `
-        <li>
-          Orden: ${orden} | Piezas: ${datos.totalPiezas}
-          <button onclick="toggleCajas('cajas-${orden}')" class="btn-secondary list-item-btn">Ver cajas</button>
-          <ul id="cajas-${orden}" style="display:none;">
-            ${datos.cajas.map(c => `<li>${c.codigo} <button onclick="eliminarCaja('${idTarima}', '${c.id}')" class="btn-danger list-item-btn">🗑️</button></li>`).join("")}
-          </ul>
-        </li>
-      `;
-    }
+        let empleadoActual = null;
+        let currentTarima = null;
+        let codeReader = null;
+        let scanning = false;
+        let modo = "";
+        let cantidadPiezasActual = null;
+        let confirmadorActual = null; // Variable para el confirmador
+        let tarimaAConfirmar = null; // Variable para la tarima a confirmar
 
-    document.getElementById("resumenTarima").innerText =
-      `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
-    document.getElementById("listaCajas").innerHTML = lista;
-    actualizarResumenTurno(); // Asegura que el resumen del turno se actualice
-  });
-}
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-function eliminarCaja(idTarima, idCaja) {
-  if (confirm("¿Estás seguro de que quieres eliminar esta caja?")) {
-    db.ref(`tarimas/${idTarima}/cajas/${idCaja}`).remove()
-      .then(() => {
-        updateStatus("Caja eliminada correctamente.", 'success');
-        actualizarResumenTarima(idTarima);
-      })
-      .catch(error => {
-        console.error("Error al eliminar la caja:", error);
-        updateStatus("Hubo un error al eliminar la caja. Intenta de nuevo.", 'error');
-      });
-  }
-}
-
-function terminarRegistroTarima(idTarima) {
-  db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
-    const cajas = snapshot.val();
-    const totalCajas = cajas ? Object.keys(cajas).length : 0;
-    const cajasAInspeccionar = Math.ceil(totalCajas * 0.20); // Calcula el 20% y redondea hacia arriba
-
-    mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar);
-    mostrarPantallaPrincipal();
-    updateStatus("Listo para crear una nueva tarima.", 'info');
-  });
-}
-
-function mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar) {
-  const popup = document.createElement('div');
-  popup.id = 'inspeccionPopup';
-  popup.innerHTML = `
-    <div class="popup-content">
-      <h3>✅ Registro de Tarima Finalizado</h3>
-      <p>ID de Tarima: <b>${idTarima}</b></p>
-      <p>Total de cajas en la tarima: <b>${totalCajas}</b></p>
-      <p style="font-size: 1.2em; font-weight: bold; color: #ffeb3b;">Cajas a inspeccionar: <b>${cajasAInspeccionar}</b></p>
-      <button onclick="document.getElementById('inspeccionPopup').remove()" class="btn-primary">Aceptar</button>
-    </div>
-  `;
-  document.body.appendChild(popup);
-}
-
-function toggleCajas(id) {
-  const lista = document.getElementById(id);
-  if (lista) {
-    lista.style.display = lista.style.display === "none" ? "block" : "none";
-  }
-}
-
-function mostrarTarimasCreadas() {
-  const contenedor = document.getElementById("pantalla5");
-  contenedor.innerHTML = `
-    <div class="card">
-      <h2>📋 Historial de Tarimas</h2>
-      <p>Aquí puedes ver todas las tarimas registradas.</p>
-      <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
-      <div id="statusMessage"></div>
-      <ul id="listaTarimas"></ul>
-    </div>
-  `;
-
-  updateStatus("Cargando historial de tarimas...", 'info');
-  db.ref("tarimas").once("value").then(snapshot => {
-    let lista = "";
-    snapshot.forEach(tarimaSnapshot => {
-      const tarima = tarimaSnapshot.val();
-      const fecha = new Date(tarima.fechaCreacion).toLocaleString();
-
-      let cajasHtml = "";
-      let totalCajas = 0;
-      if (tarima.cajas) {
-        totalCajas = Object.keys(tarima.cajas).length;
-        for (let key in tarima.cajas) {
-          const caja = tarima.cajas[key];
-          cajasHtml += `<li>Caja: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas}</li>`;
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById("statusMessage");
+            if (statusDiv) {
+                statusDiv.textContent = message;
+                statusDiv.className = `status-${type}`;
+            }
         }
-      }
 
-      lista += `
-        <li>
-          Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Turno: ${tarima.turno} | Cajas: ${totalCajas}
-          <button onclick="toggleCajas('cajas-${tarima.id}')" class="btn-secondary list-item-btn">Ver cajas</button>
-          <br><small>Creada el ${fecha}</small>
-          <ul id="cajas-${tarima.id}" style="display:none;">
-            ${cajasHtml}
-          </ul>
-        </li>
-      `;
-    });
-    document.getElementById("listaTarimas").innerHTML = lista;
-    updateStatus("Historial cargado correctamente.", 'success');
-  }).catch(error => {
-    console.error("Error al cargar las tarimas:", error);
-    updateStatus("❌ Error al cargar el historial. Intente de nuevo.", 'error');
-  });
-}
+        function mostrarPantallaRecoleccion() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📦 Recolección</h2>
+                    <p>Escanee su número de empleado:</p>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="empleadoInput" placeholder="Escanear gafete">
+                    ${isMobile ? `<button id="btnEscEmpleado" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                </div>
+            `;
 
-function solicitarAccesoEdicion() {
-  const password = prompt("Por favor, ingrese la contraseña para editar/eliminar tarimas:");
-  if (password === "BORRAR25") {
-    mostrarEdicionTarimas();
-  } else {
-    alert("Contraseña incorrecta. Acceso denegado.");
-  }
-}
+            const input = document.getElementById("empleadoInput");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    empleadoActual = input.value.trim();
+                    input.value = "";
+                    updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
+                    setTimeout(() => mostrarPantallaPrincipal(), 1500);
+                }
+            });
 
-function mostrarEdicionTarimas() {
-  const contenedor = document.getElementById("pantalla5");
-  contenedor.innerHTML = `
-    <div class="card">
-      <h2>📝 Editar/Eliminar Tarimas</h2>
-      <p>Seleccione una tarima para editar o eliminar.</p>
-      <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
-      <div id="statusMessage"></div>
-      <ul id="listaEdicionTarimas"></ul>
-    </div>
-  `;
-  updateStatus("Cargando lista de tarimas...", 'info');
+            if (isMobile) {
+                document.getElementById("btnEscEmpleado").addEventListener("click", () => {
+                    iniciarEscaneo("empleado");
+                });
+            }
+        }
 
-  db.ref("tarimas").once("value").then(snapshot => {
-    let lista = "";
-    snapshot.forEach(tarimaSnapshot => {
-      const tarima = tarimaSnapshot.val();
-      const fecha = new Date(tarima.fechaCreacion).toLocaleString();
+        function mostrarPantallaPrincipal() {
+            const contenedor = document.getElementById("pantalla5");
+            const turnoActual = determinarTurno();
 
-      lista += `
-        <li>
-          Tarima: ${tarima.id} | Turno: ${tarima.turno}
-          <br><small>Creada el ${fecha}</small>
-          <div class="edit-delete-btns">
-            <button onclick="editarTarima('${tarima.id}')" class="btn-primary">✏️ Editar</button>
-            <button onclick="eliminarTarima('${tarima.id}')" class="btn-danger">🗑️ Eliminar</button>
-          </div>
-        </li>
-      `;
-    });
-    document.getElementById("listaEdicionTarimas").innerHTML = lista;
-    updateStatus("Lista cargada correctamente.", 'success');
-  }).catch(error => {
-    console.error("Error al cargar las tarimas:", error);
-    updateStatus("❌ Error al cargar la lista. Intente de nuevo.", 'error');
-  });
-}
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📦 Recolección & Confirmación</h2>
+                    <h3>Empleado: <b>${empleadoActual}</b></h3>
+                    <h4>Resumen de Turno (${turnoActual})</h4>
+                    <div id="resumenTurno" style="padding: 10px; background: #2c2c2e; border-radius: 8px;">
+                        Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
+                    </div>
+                    <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
+                    <button onclick="mostrarPantallaConfirmacion()" class="btn-orange">✅ Confirmación</button>
+                    <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
+                    <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
+                    <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
+                    <div id="tarimaContainer"></div>
+                </div>
+            `;
 
-function editarTarima(idTarima) {
-  currentTarima = idTarima;
-  mostrarFormularioTarima(idTarima);
-  updateStatus(`Editando tarima ${idTarima}`, 'info');
-}
+            actualizarResumenTurno();
+        }
 
-function eliminarTarima(idTarima) {
-  if (confirm(`¿Está seguro de que desea eliminar la tarima ${idTarima} y todas sus cajas?`)) {
-    db.ref(`tarimas/${idTarima}`).remove()
-      .then(() => {
-        alert(`La tarima ${idTarima} ha sido eliminada.`)
-        mostrarEdicionTarimas(); // Recarga la lista
-      })
-      .catch(error => {
-        console.error("Error al eliminar la tarima:", error);
-        alert("Hubo un error al eliminar la tarima. Intente de nuevo.");
-      });
-  }
-}
+        function actualizarResumenTurno() {
+            const turnoActual = determinarTurno();
+            db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual).once("value").then(snapshot => {
+                let tarimasCount = 0;
+                let cajasCount = 0;
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    if (tarima.turno === turnoActual) {
+                        tarimasCount++;
+                        if (tarima.cajas) {
+                            cajasCount += Object.keys(tarima.cajas).length;
+                        }
+                    }
+                });
+                document.getElementById("tarimasRegistradas").textContent = tarimasCount;
+                document.getElementById("cajasRegistradas").textContent = cajasCount;
+            });
+        }
 
-function cerrarSesion() {
-  empleadoActual = null;
-  currentTarima = null;
-  cantidadPiezasActual = null;
-  mostrarPantallaRecoleccion();
-  updateStatus("Sesión cerrada. Escanee su gafete para iniciar.", 'info');
-}
+        function determinarTurno() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            if ((hours > 6 || (hours === 6 && minutes >= 30)) && (hours < 18 || (hours === 18 && minutes < 30))) {
+                return "Turno 1";
+            } else {
+                return "Turno 2";
+            }
+        }
 
-// PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => {
-        console.log('Service Worker registrado con éxito:', reg);
-      })
-      .catch(err => {
-        console.error('Error al registrar el Service Worker:', err);
-      });
-  });
-}
+        async function iniciarEscaneo(tipo) {
+            if (scanning) return;
+            modo = tipo;
+            scanning = true;
+            const scannerModal = document.getElementById("scannerModal");
+            scannerModal.classList.add('active');
+            
+            codeReader = new ZXing.BrowserBarcodeReader();
+            updateStatus("Cámara activa. Escaneando...", 'info');
+            
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: "environment"
+                    }
+                };
 
-document.addEventListener('DOMContentLoaded', () => {
-  mostrarPantallaRecoleccion();
-  document.getElementById('closeScannerBtn').addEventListener('click', detenerCamara);
-});
+                const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview', constraints);
+                
+                if (modo === "empleado") {
+                    empleadoActual = result.text.trim();
+                    updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
+                    setTimeout(() => mostrarPantallaPrincipal(), 1500);
+                } else if (modo === "caja") {
+                    procesarEscaneo(result.text.trim(), currentTarima);
+                } else if (modo === "confirmador") {
+                    confirmadorActual = result.text.trim();
+                    updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
+                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+                } else if (modo === "tarimaConfirmacion") {
+                    tarimaAConfirmar = result.text.trim();
+                    procesarConfirmacion();
+                } else if (modo === "cajaConfirmacion") {
+                    procesarConfirmacionCaja(result.text.trim());
+                }
+            } catch (err) {
+                console.error("Error al iniciar la cámara:", err);
+                updateStatus("❌ No se pudo iniciar la cámara. Verifique que los permisos estén habilitados.", 'error');
+            } finally {
+                detenerCamara();
+            }
+        }
 
-</script>
+        function detenerCamara() {
+            if (codeReader) {
+                codeReader.reset();
+            }
+            const scannerModal = document.getElementById("scannerModal");
+            scannerModal.classList.remove('active');
+            scanning = false;
+        }
+
+        function crearNuevaTarima() {
+            const turno = determinarTurno();
+            db.ref("tarimas").orderByKey().limitToLast(1).once("value").then(snapshot => {
+                let nextIdNumber = 1;
+                if (snapshot.exists()) {
+                    const lastTarimaId = Object.keys(snapshot.val())[0];
+                    const lastIdNumber = parseInt(lastTarimaId.split('-')[1]);
+                    if (!isNaN(lastIdNumber)) {
+                        nextIdNumber = lastIdNumber + 1;
+                    }
+                }
+                const idTarima = "TAR-" + String(nextIdNumber).padStart(3, '0');
+                currentTarima = idTarima;
+                cantidadPiezasActual = null;
+
+                db.ref("tarimas/" + idTarima).set({
+                    id: idTarima,
+                    empleadoId: empleadoActual,
+                    fechaCreacion: new Date().toISOString(),
+                    turno: turno,
+                    cajas: {},
+                    estado: 'pendiente' // Nuevo campo de estado
+                }).then(() => {
+                    mostrarFormularioTarima(idTarima);
+                }).catch(error => {
+                    console.error("Error al crear la tarima:", error);
+                    updateStatus("❌ Error al crear la tarima. Intente de nuevo.", 'error');
+                });
+            });
+        }
+
+        function mostrarFormularioTarima(idTarima) {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h3>Tarima: ${idTarima}</h3>
+                    <h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual || 'Sin seleccionar'}</span></h4>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="codigoCaja" placeholder="Escanear BX o Cantidad (1, 5, 6, 12, 24, 34)">
+                    ${isMobile ? `<button id="btnEscCaja" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <h4>Resumen</h4>
+                    <div id="resumenTarima">Cajas: 0 | Piezas: 0</div>
+                    <h4>Cajas registradas</h4>
+                    <ul id="listaCajas"></ul>
+                    <button onclick="terminarRegistroTarima('${idTarima}')" class="btn-orange">✅ Terminar Registro</button>
+                    <button onclick="cancelarCreacionTarima('${idTarima}')" class="btn-danger">❌ Cancelar</button>
+                </div>
+            `;
+            updateStatus("Escanear el código de cantidad (1, 5, 6, 12, 24, 34) para iniciar.", 'info');
+
+            if (isMobile) {
+                document.getElementById("btnEscCaja").addEventListener("click", () => {
+                    iniciarEscaneo("caja");
+                });
+            }
+
+            configurarEscaneo(idTarima);
+            actualizarResumenTarima(idTarima);
+        }
+
+        function cancelarCreacionTarima(idTarima) {
+            if (confirm("¿Está seguro de que desea cancelar? Se eliminará esta tarima y todos los datos que haya capturado en ella.")) {
+                db.ref(`tarimas/${idTarima}`).remove()
+                    .then(() => {
+                        updateStatus("✅ Creación de tarima cancelada y eliminada.", 'success');
+                        mostrarPantallaPrincipal();
+                    })
+                    .catch(error => {
+                        console.error("Error al cancelar la tarima:", error);
+                        updateStatus("❌ Error al cancelar. Intente de nuevo.", 'error');
+                    });
+            }
+        }
+
+        function procesarEscaneo(valor, idTarima) {
+            const input = document.getElementById("codigoCaja");
+            const cantidadesValidas = [1, 5, 6, 12, 24, 34];
+            const cantidadInput = parseInt(valor);
+            if (cantidadesValidas.includes(cantidadInput)) {
+                cantidadPiezasActual = cantidadInput;
+                document.getElementById("cantidadActual").textContent = cantidadPiezasActual;
+                updateStatus(`✅ Cantidad establecida a ${cantidadPiezasActual}. Ahora escanee el código BX.`, 'success');
+                input.value = "";
+                return;
+            }
+            if (!valor.startsWith('BX')) {
+                updateStatus("❌ Error: El código de caja debe empezar con 'BX'. Caja no agregada.", 'error');
+                input.value = "";
+                return;
+            }
+            if (cantidadPiezasActual === null) {
+                updateStatus("❌ Error: Primero debe escanear la cantidad de piezas (1, 5, 6, 12, 24, 34).", 'error');
+                input.value = "";
+                return;
+            }
+            const codigoCaja = valor.trim();
+            const numeroOrden = codigoCaja.substring(2, 12);
+
+            db.ref("tarimas").once("value").then(snapshot => {
+                let bxEncontrado = false;
+                let tarimaAnterior = null;
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    if (tarima.cajas) {
+                        for (let key in tarima.cajas) {
+                            if (tarima.cajas[key].codigoCaja === codigoCaja) {
+                                bxEncontrado = true;
+                                tarimaAnterior = tarima.id;
+                                break;
+                            }
+                        }
+                    }
+                    if (bxEncontrado) {
+                        return true;
+                    }
+                });
+
+                if (bxEncontrado) {
+                    if (tarimaAnterior === idTarima) {
+                        updateStatus("❌ Error: Este BX ya fue agregado a esta tarima.", 'error');
+                    } else {
+                        updateStatus(`❌ Error: Este BX ya fue agregado a la tarima: ${tarimaAnterior}`, 'error');
+                    }
+                    input.value = "";
+                    return;
+                }
+                const cajaTemp = {
+                    codigoCaja: codigoCaja,
+                    numeroOrden: numeroOrden,
+                    cantidadPiezas: cantidadPiezasActual,
+                    empleadoId: empleadoActual,
+                    turno: determinarTurno(),
+                    timestamp: new Date().toISOString()
+                };
+                const cajaId = db.ref(`tarimas/${idTarima}/cajas`).push().key;
+
+                db.ref(`tarimas/${idTarima}/cajas/${cajaId}`).set(cajaTemp)
+                    .then(() => {
+                        updateStatus(`📦 Caja ${codigoCaja} (${cantidadPiezasActual} pz) guardada correctamente.`, 'success');
+                        actualizarResumenTarima(idTarima);
+                    })
+                    .catch((error) => {
+                        console.error("Error al guardar la caja:", error);
+                        updateStatus("❌ Error al guardar la caja. Intenta de nuevo.", 'error');
+                    });
+            }).catch(error => {
+                console.error("Error al verificar BX:", error);
+                updateStatus("❌ Error al verificar el BX. Intente de nuevo.", 'error');
+            });
+            input.value = "";
+        }
+
+        function configurarEscaneo(idTarima) {
+            const input = document.getElementById("codigoCaja");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    procesarEscaneo(input.value.trim(), idTarima);
+                }
+            });
+        }
+
+        function actualizarResumenTarima(idTarima) {
+            db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
+                const cajas = snapshot.val();
+                const totalCajas = cajas ? Object.keys(cajas).length : 0;
+                let totalPiezas = 0;
+                let lista = "";
+                const cajasPorOrden = {};
+                snapshot.forEach(cajaSnapshot => {
+                    const caja = cajaSnapshot.val();
+                    const cajaId = cajaSnapshot.key;
+                    totalPiezas += caja.cantidadPiezas || 0;
+                    const orden = caja.numeroOrden;
+                    if (!cajasPorOrden[orden]) {
+                        cajasPorOrden[orden] = {
+                            totalPiezas: 0,
+                            cajas: []
+                        };
+                    }
+                    cajasPorOrden[orden].totalPiezas += caja.cantidadPiezas || 0;
+                    cajasPorOrden[orden].cajas.push({ id: cajaId, codigo: caja.codigoCaja });
+                });
+                for (const orden in cajasPorOrden) {
+                    const datos = cajasPorOrden[orden];
+                    lista += `
+                        <li>
+                            Orden: ${orden} | Piezas: ${datos.totalPiezas}
+                            <button onclick="toggleCajas('cajas-${orden}')" class="btn-secondary list-item-btn">Ver cajas</button>
+                            <ul id="cajas-${orden}" style="display:none;">
+                                ${datos.cajas.map(c => `<li>${c.codigo} <button onclick="eliminarCaja('${idTarima}', '${c.id}')" class="btn-danger list-item-btn">🗑️</button></li>`).join("")}
+                            </ul>
+                        </li>
+                    `;
+                }
+                document.getElementById("resumenTarima").innerText =
+                    `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
+                document.getElementById("listaCajas").innerHTML = lista;
+                actualizarResumenTurno();
+            });
+        }
+
+        function eliminarCaja(idTarima, idCaja) {
+            if (confirm("¿Estás seguro de que quieres eliminar esta caja?")) {
+                db.ref(`tarimas/${idTarima}/cajas/${idCaja}`).remove()
+                    .then(() => {
+                        updateStatus("Caja eliminada correctamente.", 'success');
+                        actualizarResumenTarima(idTarima);
+                    })
+                    .catch(error => {
+                        console.error("Error al eliminar la caja:", error);
+                        updateStatus("Hubo un error al eliminar la caja. Intenta de nuevo.", 'error');
+                    });
+            }
+        }
+
+        function terminarRegistroTarima(idTarima) {
+            db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
+                const cajas = snapshot.val();
+                const totalCajas = cajas ? Object.keys(cajas).length : 0;
+                const cajasAInspeccionar = Math.ceil(totalCajas * 0.20);
+                mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar);
+                mostrarPantallaPrincipal();
+                updateStatus("Listo para crear una nueva tarima.", 'info');
+            });
+        }
+
+        function mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar) {
+            const popup = document.createElement('div');
+            popup.id = 'inspeccionPopup';
+            popup.innerHTML = `
+                <div class="popup-content">
+                    <h3>✅ Registro de Tarima Finalizado</h3>
+                    <p>ID de Tarima: <b>${idTarima}</b></p>
+                    <p>Total de cajas en la tarima: <b>${totalCajas}</b></p>
+                    <p style="font-size: 1.2em; font-weight: bold; color: #ffeb3b;">Cajas a inspeccionar: <b>${cajasAInspeccionar}</b></p>
+                    <button onclick="document.getElementById('inspeccionPopup').remove()" class="btn-primary">Aceptar</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+        }
+
+        function toggleCajas(id) {
+            const lista = document.getElementById(id);
+            if (lista) {
+                lista.style.display = lista.style.display === "none" ? "block" : "none";
+            }
+        }
+
+        function mostrarTarimasCreadas() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📋 Historial de Tarimas</h2>
+                    <p>Aquí puedes ver todas las tarimas registradas.</p>
+                    <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+                    <div id="statusMessage"></div>
+                    <ul id="listaTarimas"></ul>
+                </div>
+            `;
+
+            updateStatus("Cargando historial de tarimas...", 'info');
+            db.ref("tarimas").once("value").then(snapshot => {
+                let lista = "";
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    const fecha = new Date(tarima.fechaCreacion).toLocaleString();
+
+                    let cajasHtml = "";
+                    let totalCajas = 0;
+                    if (tarima.cajas) {
+                        totalCajas = Object.keys(tarima.cajas).length;
+                        for (let key in tarima.cajas) {
+                            const caja = tarima.cajas[key];
+                            const estadoConfirmacion = caja.confirmado ? '✅ Confirmado' : '❌ Pendiente';
+                            cajasHtml += `<li>Caja: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas} | Estado: ${estadoConfirmacion}</li>`;
+                        }
+                    }
+                    const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : '❌ Pendiente';
+                    lista += `
+                        <li>
+                            Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Cajas: ${totalCajas}
+                            <br>Estado: ${estadoTarima}
+                            <button onclick="toggleCajas('cajas-${tarima.id}')" class="btn-secondary list-item-btn">Ver cajas</button>
+                            <br><small>Creada el ${fecha}</small>
+                            <ul id="cajas-${tarima.id}" style="display:none;">
+                                ${cajasHtml}
+                            </ul>
+                        </li>
+                    `;
+                });
+                document.getElementById("listaTarimas").innerHTML = lista;
+                updateStatus("Historial cargado correctamente.", 'success');
+            }).catch(error => {
+                console.error("Error al cargar las tarimas:", error);
+                updateStatus("❌ Error al cargar el historial. Intente de nuevo.", 'error');
+            });
+        }
+
+        function solicitarAccesoEdicion() {
+            const password = prompt("Por favor, ingrese la contraseña para editar/eliminar tarimas:");
+            if (password === "BORRAR25") {
+                mostrarEdicionTarimas();
+            } else {
+                alert("Contraseña incorrecta. Acceso denegado.");
+            }
+        }
+
+        function mostrarEdicionTarimas() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📝 Editar/Eliminar Tarimas</h2>
+                    <p>Seleccione una tarima para editar o eliminar.</p>
+                    <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+                    <div id="statusMessage"></div>
+                    <ul id="listaEdicionTarimas"></ul>
+                </div>
+            `;
+            updateStatus("Cargando lista de tarimas...", 'info');
+
+            db.ref("tarimas").once("value").then(snapshot => {
+                let lista = "";
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    const fecha = new Date(tarima.fechaCreacion).toLocaleString();
+                    const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : '❌ Pendiente';
+                    lista += `
+                        <li>
+                            Tarima: ${tarima.id} | Turno: ${tarima.turno}
+                            <br>Estado: ${estadoTarima}
+                            <br><small>Creada el ${fecha}</small>
+                            <div class="edit-delete-btns">
+                                <button onclick="editarTarima('${tarima.id}')" class="btn-primary">✏️ Editar</button>
+                                <button onclick="eliminarTarima('${tarima.id}')" class="btn-danger">🗑️ Eliminar</button>
+                            </div>
+                        </li>
+                    `;
+                });
+                document.getElementById("listaEdicionTarimas").innerHTML = lista;
+                updateStatus("Lista cargada correctamente.", 'success');
+            }).catch(error => {
+                console.error("Error al cargar las tarimas:", error);
+                updateStatus("❌ Error al cargar la lista. Intente de nuevo.", 'error');
+            });
+        }
+
+        function editarTarima(idTarima) {
+            currentTarima = idTarima;
+            mostrarFormularioTarima(idTarima);
+            updateStatus(`Editando tarima ${idTarima}`, 'info');
+        }
+
+        function eliminarTarima(idTarima) {
+            if (confirm(`¿Está seguro de que desea eliminar la tarima ${idTarima} y todas sus cajas?`)) {
+                db.ref(`tarimas/${idTarima}`).remove()
+                    .then(() => {
+                        alert(`La tarima ${idTarima} ha sido eliminada.`)
+                        mostrarEdicionTarimas();
+                    })
+                    .catch(error => {
+                        console.error("Error al eliminar la tarima:", error);
+                        alert("Hubo un error al eliminar la tarima. Intente de nuevo.");
+                    });
+            }
+        }
+
+        function cerrarSesion() {
+            empleadoActual = null;
+            currentTarima = null;
+            cantidadPiezasActual = null;
+            confirmadorActual = null;
+            tarimaAConfirmar = null;
+            mostrarPantallaRecoleccion();
+            updateStatus("Sesión cerrada. Escanee su gafete para iniciar.", 'info');
+        }
+
+        // --- FUNCIONES DE CONFIRMACIÓN ---
+
+        function mostrarPantallaConfirmacion() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>✅ Confirmación de Tarima</h2>
+                    <p>Paso 1: Escanee su gafete para registrarse como confirmador.</p>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="confirmadorInput" placeholder="Escanear gafete">
+                    ${isMobile ? `<button id="btnEscConfirmador" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
+                </div>
+            `;
+            updateStatus("Esperando escaneo de gafete...", 'info');
+            const input = document.getElementById("confirmadorInput");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    confirmadorActual = input.value.trim();
+                    input.value = "";
+                    updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
+                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+                }
+            });
+
+            if (isMobile) {
+                document.getElementById("btnEscConfirmador").addEventListener("click", () => {
+                    iniciarEscaneo("confirmador");
+                });
+            }
+        }
+
+        function mostrarPantallaConfirmacion2() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>✅ Confirmación de Tarima</h2>
+                    <h3>Confirmador: <b>${confirmadorActual}</b></h3>
+                    <p>Paso 2: Escanee el código de la tarima a confirmar.</p>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="tarimaInput" placeholder="Escanear TAR-XXX">
+                    ${isMobile ? `<button id="btnEscTarima" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <button onclick="mostrarPantallaPrincipal()" class="btn-secondary">⬅️ Regresar</button>
+                </div>
+            `;
+            updateStatus("Esperando escaneo de tarima...", 'info');
+            const input = document.getElementById("tarimaInput");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    tarimaAConfirmar = input.value.trim();
+                    procesarConfirmacion();
+                }
+            });
+
+            if (isMobile) {
+                document.getElementById("btnEscTarima").addEventListener("click", () => {
+                    iniciarEscaneo("tarimaConfirmacion");
+                });
+            }
+        }
+
+        function procesarConfirmacion() {
+            db.ref(`tarimas/${tarimaAConfirmar}`).once("value").then(snapshot => {
+                const tarimaData = snapshot.val();
+                if (!tarimaData) {
+                    updateStatus("❌ Error: Tarima no encontrada.", 'error');
+                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+                    return;
+                }
+                if (tarimaData.estado === 'confirmada') {
+                    updateStatus("❌ Error: Esta tarima ya ha sido confirmada.", 'error');
+                    setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+                    return;
+                }
+                mostrarFormularioConfirmacionCajas(tarimaData);
+            }).catch(error => {
+                console.error("Error al buscar la tarima:", error);
+                updateStatus("❌ Error al buscar la tarima. Intente de nuevo.", 'error');
+                setTimeout(() => mostrarPantallaConfirmacion2(), 1500);
+            });
+        }
+
+        function mostrarFormularioConfirmacionCajas(tarimaData) {
+            const contenedor = document.getElementById("pantalla5");
+            const cajasPendientes = Object.values(tarimaData.cajas || {}).filter(caja => !caja.confirmado).length;
+            const cajasConfirmadas = Object.values(tarimaData.cajas || {}).filter(caja => caja.confirmado).length;
+            const totalCajas = Object.values(tarimaData.cajas || {}).length;
+
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>✅ Confirmando Tarima: ${tarimaData.id}</h2>
+                    <h3>Recolector: <b>${tarimaData.empleadoId}</b></h3>
+                    <h4>Cajas: <span id="cajasConfirmadas">${cajasConfirmadas}</span> / <span id="totalCajas">${totalCajas}</span> confirmadas</h4>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="cajaConfirmacionInput" placeholder="Escanear BX-XXX">
+                    ${isMobile ? `<button id="btnEscCajaConf" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <h4>Cajas pendientes</h4>
+                    <ul id="listaCajasConfirmacion"></ul>
+                    <button onclick="terminarConfirmacion('${tarimaData.id}')" class="btn-green">✅ Finalizar Confirmación</button>
+                    <button onclick="mostrarPantallaPrincipal()" class="btn-danger">❌ Cancelar</button>
+                </div>
+            `;
+            updateStatus("Escanear el código de cada caja para confirmar.", 'info');
+
+            if (isMobile) {
+                document.getElementById("btnEscCajaConf").addEventListener("click", () => {
+                    iniciarEscaneo("cajaConfirmacion");
+                });
+            }
+
+            const input = document.getElementById("cajaConfirmacionInput");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    procesarConfirmacionCaja(input.value.trim());
+                }
+            });
+
+            actualizarListaConfirmacion(tarimaData.id);
+        }
+
+        function procesarConfirmacionCaja(codigoCaja) {
+            if (!codigoCaja.startsWith('BX')) {
+                updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
+                return;
+            }
+            db.ref(`tarimas/${tarimaAConfirmar}/cajas`).orderByChild("codigoCaja").equalTo(codigoCaja).once("value").then(snapshot => {
+                if (!snapshot.exists()) {
+                    updateStatus("❌ Error: Caja no encontrada en esta tarima.", 'error');
+                    return;
+                }
+                const cajaKey = Object.keys(snapshot.val())[0];
+                const cajaData = snapshot.val()[cajaKey];
+                
+                if (cajaData.confirmado) {
+                    updateStatus("❌ Error: Esta caja ya ha sido confirmada.", 'error');
+                } else {
+                    db.ref(`tarimas/${tarimaAConfirmar}/cajas/${cajaKey}`).update({
+                        confirmado: true,
+                        confirmadorId: confirmadorActual,
+                        fechaConfirmacion: new Date().toISOString()
+                    }).then(() => {
+                        updateStatus(`✅ Caja ${codigoCaja} confirmada.`, 'success');
+                        actualizarListaConfirmacion(tarimaAConfirmar);
+                    }).catch(error => {
+                        console.error("Error al confirmar la caja:", error);
+                        updateStatus("❌ Error al confirmar la caja. Intente de nuevo.", 'error');
+                    });
+                }
+            });
+        }
+
+        function actualizarListaConfirmacion(idTarima) {
+            db.ref(`tarimas/${idTarima}`).once("value").then(snapshot => {
+                const tarimaData = snapshot.val();
+                const cajas = tarimaData.cajas || {};
+                const listaUl = document.getElementById("listaCajasConfirmacion");
+                const cajasConfirmadasCount = Object.values(cajas).filter(caja => caja.confirmado).length;
+                const totalCajas = Object.keys(cajas).length;
+                
+                document.getElementById("cajasConfirmadas").textContent = cajasConfirmadasCount;
+                document.getElementById("totalCajas").textContent = totalCajas;
+
+                let listaHTML = "";
+                for (const key in cajas) {
+                    const caja = cajas[key];
+                    if (!caja.confirmado) {
+                        listaHTML += `<li>❌ ${caja.codigoCaja}</li>`;
+                    }
+                }
+                listaUl.innerHTML = listaHTML;
+            });
+        }
+        
+        function terminarConfirmacion(idTarima) {
+            if (confirm("¿Está seguro de que todas las cajas han sido escaneadas? Una vez finalizado, no podrá agregar más confirmaciones.")) {
+                db.ref(`tarimas/${idTarima}`).update({
+                    estado: 'confirmada'
+                }).then(() => {
+                    updateStatus("✅ Tarima confirmada con éxito. Proceso finalizado.", 'success');
+                    tarimaAConfirmar = null;
+                    confirmadorActual = null;
+                    setTimeout(() => mostrarPantallaPrincipal(), 2000);
+                }).catch(error => {
+                    console.error("Error al finalizar la tarima:", error);
+                    updateStatus("❌ Error al finalizar. Intente de nuevo.", 'error');
+                });
+            }
+        }
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Se usa la ruta relativa del archivo para que funcione con GitHub Pages
+                const path = window.location.pathname.split('/').slice(0, -1).join('/');
+                navigator.serviceWorker.register(`${path}/sw.js`, { scope: `${path}/` })
+                    .then(reg => {
+                        console.log("✅ Service Worker registrado con éxito:", reg);
+                    })
+                    .catch(err => {
+                        console.error("❌ Error al registrar Service Worker:", err);
+                    });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            mostrarPantallaRecoleccion();
+            document.getElementById('closeScannerBtn').addEventListener('click', detenerCamara);
+        });
+
+    </script>
 </body>
 </html>
