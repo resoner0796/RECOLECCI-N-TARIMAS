@@ -231,6 +231,7 @@
                     <h2>Seleccione su función</h2>
                     <button onclick="iniciarFlujoRecoleccion()" class="btn-primary">📦 Recolección</button>
                     <button onclick="iniciarFlujoConfirmacion()" class="btn-green">✅ Confirmación</button>
+                    <button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificación</button>
                     <div id="statusMessage" style="margin-top: 20px;"></div>
                 </div>
             `;
@@ -381,6 +382,8 @@
                     procesarEscaneo(result.text.trim(), currentTarima);
                 } else if (modo === "cajaConfirmacion") {
                     buscarTarimaPorCaja(result.text.trim());
+                } else if (modo === "verificacion") {
+                    buscarYMostrarInfoBX(result.text.trim());
                 }
             } catch (err) {
                 console.error("Error al iniciar la cámara:", err);
@@ -1020,6 +1023,102 @@
                 }
             });
         }
+
+        // --- FUNCIONES DE VERIFICACIÓN ---
+
+        function iniciarFlujoVerificacion() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>🔎 Verificación de BX</h2>
+                    <p>Escanee el código del BX para verificar su estado y tarima.</p>
+                    <div id="statusMessage"></div>
+                    <input type="text" id="verificacionInput" placeholder="Escanear BX-XXX">
+                    ${isMobile ? `<button id="btnEscVerificacion" class="btn-secondary">📷 Iniciar escaneo</button>` : ""}
+                    <button onclick="mostrarPantallaInicio()" class="btn-primary">⬅️ Regresar</button>
+                </div>
+            `;
+            updateStatus("Esperando escaneo de BX...", 'info');
+            const input = document.getElementById("verificacionInput");
+            input.addEventListener("keypress", function(e) {
+                if (e.key === "Enter") {
+                    buscarYMostrarInfoBX(input.value.trim());
+                }
+            });
+
+            if (isMobile) {
+                document.getElementById("btnEscVerificacion").addEventListener("click", () => {
+                    iniciarEscaneo("verificacion");
+                });
+            }
+        }
+
+        function buscarYMostrarInfoBX(codigoCaja) {
+            if (!codigoCaja.startsWith('BX')) {
+                updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
+                return;
+            }
+
+            db.ref("tarimas").once("value").then(snapshot => {
+                let tarimaEncontrada = null;
+                let cajaEncontrada = null;
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    if (tarima.cajas) {
+                        for (let key in tarima.cajas) {
+                            if (tarima.cajas[key].codigoCaja === codigoCaja) {
+                                tarimaEncontrada = tarima;
+                                cajaEncontrada = tarima.cajas[key];
+                                break;
+                            }
+                        }
+                    }
+                    if (tarimaEncontrada) {
+                        return true;
+                    }
+                });
+
+                if (!tarimaEncontrada) {
+                    updateStatus("❌ Error: Caja no encontrada en ninguna tarima.", 'error');
+                    return;
+                }
+                
+                mostrarInfoTarima(tarimaEncontrada, codigoCaja);
+
+            }).catch(error => {
+                console.error("Error al buscar la tarima por caja:", error);
+                updateStatus("❌ Error al buscar la tarima. Intente de nuevo.", 'error');
+            });
+        }
+        
+        function mostrarInfoTarima(tarimaData, codigoCajaEscaneado) {
+            const contenedor = document.getElementById("pantalla5");
+            const totalCajas = Object.keys(tarimaData.cajas || {}).length;
+            const cajasHtml = Object.values(tarimaData.cajas || {}).map(caja => {
+                const estado = caja.confirmado ? '✅ Confirmado' : '❌ Pendiente';
+                const isScanned = caja.codigoCaja === codigoCajaEscaneado;
+                const highlight = isScanned ? 'background-color: #34c759; color: #FFFFFF;' : '';
+                return `<li style="${highlight}">${caja.codigoCaja} - ${estado}</li>`;
+            }).join('');
+            
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>🔎 Información de Tarima</h2>
+                    <h3>Tarima: <b>${tarimaData.id}</b></h3>
+                    <p><b>Recolector:</b> ${tarimaData.empleadoId}</p>
+                    <p><b>Estado de Tarima:</b> ${tarimaData.estado === 'confirmada' ? '✅ Confirmada' : (tarimaData.estado === 'confirmadaConFaltantes' ? '⚠️ Confirmada con Faltantes' : '❌ Pendiente')}</p>
+                    <p><b>Total de cajas:</b> ${totalCajas}</p>
+                    <hr>
+                    <h4>Cajas en la Tarima:</h4>
+                    <ul id="listaInfoCajas">${cajasHtml}</ul>
+                    <div id="statusMessage"></div>
+                    <button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificar otro BX</button>
+                    <button onclick="mostrarPantallaInicio()" class="btn-primary">⬅️ Regresar a Inicio</button>
+                </div>
+            `;
+            updateStatus(`Información para el BX: ${codigoCajaEscaneado}`, 'info');
+        }
+
 
         // --- NUEVA FUNCIÓN PARA ANÁLISIS DE DISCREPANCIAS ---
         function mostrarAnalisisDiscrepancias() {
