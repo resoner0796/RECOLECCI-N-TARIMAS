@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <style>
+        /* Estilos generales y de tarjeta */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background: #000000;
@@ -27,7 +28,8 @@
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             text-align: center;
         }
-        input { 
+        /* Estilos de inputs y botones */
+        input, select { 
             padding: 12px;
             width: calc(100% - 24px);
             margin: 10px 0;
@@ -75,6 +77,7 @@
         button:active {
             filter: brightness(0.9);
         }
+        /* Estilos de títulos y listas */
         h2, h3, h4 { margin: 10px 0; }
         ul { padding-left: 0; list-style: none; }
         li { 
@@ -170,6 +173,30 @@
             0% { top: 0; }
             50% { top: 100%; }
             100% { top: 0; }
+        }
+
+        /* Bloque de estilos para Reportes y Análisis */
+        .report-section {
+            text-align: left;
+            margin-top: 20px;
+            border-top: 1px solid #3a3a3c;
+            padding-top: 20px;
+        }
+        .report-filters {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        @media (min-width: 600px) {
+            .report-filters {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        .report-results-list li {
+            background-color: #2c2c2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
         }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -285,22 +312,34 @@
                 setTimeout(() => mostrarPantallaInicio(), 2000);
             }
         }
-        
+
+        /**
+         * @description NUEVO BLOQUE: Funcionalidades para Recolectores y Administradores.
+         * Se agregó un Dashboard de Productividad y un botón de "Ver mis Tarimas" (para Recolectores)
+         * Se agregó un botón de "Reportes y Análisis" y "Dashboard Admin" (solo para Administradores)
+         */
         function mostrarPantallaOpcionesRecoleccion(rol) {
             const contenedor = document.getElementById("pantalla5");
             const turnoActual = determinarTurno();
 
             let buttonsHtml = "";
+            let adminButtons = `
+                <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver todas las tarimas</button>
+                <button onclick="mostrarAnalisisDiscrepancias()" class="btn-secondary">🔎 Ver Discrepancias</button>
+                <button onclick="mostrarReportesYAnalisis()" class="btn-secondary">📊 Reportes y Análisis</button>
+                <button onclick="mostrarDashboardAdmin()" class="btn-secondary">📈 Dashboard Admin</button>
+                <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
+            `;
+
             if (rol === 'administrador') {
                 buttonsHtml += `
                     <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
-                    <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
-                    <button onclick="mostrarAnalisisDiscrepancias()" class="btn-secondary">🔎 Ver Discrepancias</button>
-                    <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
+                    ${adminButtons}
                 `;
             } else if (rol === 'recolector') {
                 buttonsHtml += `
                     <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
+                    <button onclick="mostrarEdicionTarimasRecolector()" class="btn-secondary">📋 Ver y Editar mis Tarimas</button>
                 `;
             }
 
@@ -359,6 +398,10 @@
             }
         }
 
+        /**
+         * @description NUEVO BLOQUE: Lógica para el Dashboard de Productividad Personal
+         * Se agregó la lógica para contar las tarimas y cajas del empleado actual y turno actual.
+         */
         function actualizarResumenTurno() {
             const turnoActual = determinarTurno();
             db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual).once("value").then(snapshot => {
@@ -675,7 +718,7 @@
             const popup = document.createElement('div');
             popup.id = 'inspeccionPopup';
             popup.innerHTML = `
-                <div class="popup-content">
+                <div class="card popup-content">
                     <h3>✅ Registro de Tarima Finalizado</h3>
                     <p>ID de Tarima: <b>${idTarima}</b></p>
                     <p>Total de cajas en la tarima: <b>${totalCajas}</b></p>
@@ -711,26 +754,16 @@
                 snapshot.forEach(tarimaSnapshot => {
                     const tarima = tarimaSnapshot.val();
                     const fecha = new Date(tarima.fechaCreacion).toLocaleString();
-
-                    let cajasHtml = "";
-                    let totalCajas = 0;
-                    if (tarima.cajas) {
-                        totalCajas = Object.keys(tarima.cajas).length;
-                        for (let key in tarima.cajas) {
-                            const caja = tarima.cajas[key];
-                            const estadoConfirmacion = caja.confirmado ? '✅ Confirmado' : '❌ Pendiente';
-                            cajasHtml += `<li>Caja: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas} | Estado: ${estadoConfirmacion}</li>`;
-                        }
-                    }
+                    let totalCajas = tarima.cajas ? Object.keys(tarima.cajas).length : 0;
                     const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : (tarima.estado === 'confirmadaConFaltantes' ? '⚠️ Confirmada con faltantes' : '❌ Pendiente');
                     lista += `
                         <li>
                             Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Cajas: ${totalCajas}
                             <br>Estado: ${estadoTarima}
-                            <button onclick="toggleCajas('cajas-${tarima.id}')" class="btn-secondary list-item-btn">Ver cajas</button>
                             <br><small>Creada el ${fecha}</small>
-                            <ul id="cajas-${tarima.id}" style="display:none;">
-                                ${cajasHtml}
+                            <button onclick="toggleCajas('cajas-historial-${tarima.id}')" class="btn-secondary list-item-btn">Ver cajas</button>
+                            <ul id="cajas-historial-${tarima.id}" style="display:none;">
+                                ${Object.values(tarima.cajas || {}).map(caja => `<li>${caja.codigoCaja} - ${caja.confirmado ? '✅ Confirmado' : '❌ Pendiente'}</li>`).join("")}
                             </ul>
                         </li>
                     `;
@@ -742,6 +775,52 @@
                 updateStatus("❌ Error al cargar el historial. Intente de nuevo.", 'error');
             });
         }
+
+        /**
+         * @description NUEVO BLOQUE: Funcionalidad para Recolectores para ver y editar sus propias tarimas
+         */
+        function mostrarEdicionTarimasRecolector() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📝 Mis Tarimas</h2>
+                    <p>Seleccione una de tus tarimas para editar o eliminar.</p>
+                    <button onclick="mostrarPantallaOpcionesRecoleccion('recolector')" class="btn-primary">⬅️ Regresar</button>
+                    <div id="statusMessage"></div>
+                    <ul id="listaEdicionTarimas"></ul>
+                </div>
+            `;
+            updateStatus("Cargando tus tarimas...", 'info');
+
+            db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual).once("value").then(snapshot => {
+                let lista = "";
+                if (!snapshot.exists()) {
+                    lista = `<li>Aún no has creado ninguna tarima.</li>`;
+                } else {
+                    snapshot.forEach(tarimaSnapshot => {
+                        const tarima = tarimaSnapshot.val();
+                        const fecha = new Date(tarima.fechaCreacion).toLocaleString();
+                        const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : (tarima.estado === 'confirmadaConFaltantes' ? '⚠️ Confirmada con faltantes' : '❌ Pendiente');
+                        lista += `
+                            <li>
+                                Tarima: ${tarima.id} | Estado: ${estadoTarima}
+                                <br><small>Creada el ${fecha}</small>
+                                <div class="edit-delete-btns">
+                                    <button onclick="editarTarima('${tarima.id}')" class="btn-primary">✏️ Editar</button>
+                                    <button onclick="eliminarTarima('${tarima.id}')" class="btn-danger">🗑️ Eliminar</button>
+                                </div>
+                            </li>
+                        `;
+                    });
+                }
+                document.getElementById("listaEdicionTarimas").innerHTML = lista;
+                updateStatus("Lista cargada correctamente.", 'success');
+            }).catch(error => {
+                console.error("Error al cargar las tarimas:", error);
+                updateStatus("❌ Error al cargar la lista. Intente de nuevo.", 'error');
+            });
+        }
+
 
         function solicitarAccesoEdicion() {
             const password = prompt("Por favor, ingrese la contraseña para editar/eliminar tarimas:");
@@ -802,7 +881,12 @@
                 db.ref(`tarimas/${idTarima}`).remove()
                     .then(() => {
                         alert(`La tarima ${idTarima} ha sido eliminada.`)
-                        mostrarEdicionTarimas();
+                        const rol = administradores.includes(empleadoActual) ? 'administrador' : 'recolector';
+                        if (rol === 'administrador') {
+                            mostrarEdicionTarimas();
+                        } else {
+                            mostrarEdicionTarimasRecolector();
+                        }
                     })
                     .catch(error => {
                         console.error("Error al eliminar la tarima:", error);
@@ -1149,7 +1233,8 @@
         }
 
 
-        // --- NUEVA FUNCIÓN PARA ANÁLISIS DE DISCREPANCIAS ---
+        // --- FUNCIONES DE ANÁLISIS ---
+
         function mostrarAnalisisDiscrepancias() {
             const contenedor = document.getElementById("pantalla5");
             contenedor.innerHTML = `
@@ -1206,6 +1291,224 @@
                 detailsDiv.style.display = detailsDiv.style.display === "none" ? "block" : "none";
             }
         }
+
+        /**
+         * @description NUEVO BLOQUE: Reportes y Análisis para Administradores
+         * Se agregó la UI de filtros y la lógica para generar reportes detallados.
+         */
+        function mostrarReportesYAnalisis() {
+            const contenedor = document.getElementById("pantalla5");
+            const fechaHoy = new Date().toISOString().slice(0, 10);
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📊 Reportes y Análisis</h2>
+                    <p>Filtra y analiza los datos de recolección.</p>
+                    <div class="report-filters">
+                        <input type="date" id="filtroFechaInicio" value="${fechaHoy}">
+                        <input type="date" id="filtroFechaFin" value="${fechaHoy}">
+                        <select id="filtroTurno">
+                            <option value="todos">Todos los turnos</option>
+                            <option value="Turno 1">Turno 1</option>
+                            <option value="Turno 2">Turno 2</option>
+                        </select>
+                        <input type="text" id="filtroEmpleado" placeholder="ID de Empleado">
+                        <select id="filtroEstado">
+                            <option value="todos">Todos los estados</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmada">Confirmada</option>
+                            <option value="confirmadaConFaltantes">Con Faltantes</option>
+                        </select>
+                    </div>
+                    <button onclick="generarReporte()" class="btn-primary">🔍 Generar Reporte</button>
+                    <button onclick="mostrarPantallaOpcionesRecoleccion('administrador')" class="btn-secondary">⬅️ Regresar</button>
+                    <div id="statusMessage"></div>
+                    <div id="reporteResultados" class="report-section">
+                        <h4>Resultados</h4>
+                        <ul id="listaResultadosReporte" class="report-results-list">
+                            <li>Usa los filtros y haz clic en "Generar Reporte" para ver los resultados.</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            updateStatus("Listo para generar un reporte.", 'info');
+        }
+
+        function generarReporte() {
+            updateStatus("Generando reporte...", 'info');
+            const fechaInicio = document.getElementById("filtroFechaInicio").value;
+            const fechaFin = document.getElementById("filtroFechaFin").value;
+            const turno = document.getElementById("filtroTurno").value;
+            const empleadoId = document.getElementById("filtroEmpleado").value.trim();
+            const estado = document.getElementById("filtroEstado").value;
+            
+            db.ref("tarimas").once("value").then(snapshot => {
+                let resultados = [];
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    const fechaCreacion = tarima.fechaCreacion.slice(0, 10);
+
+                    const cumpleFiltros = 
+                        (fechaCreacion >= fechaInicio && fechaCreacion <= fechaFin) &&
+                        (turno === 'todos' || tarima.turno === turno) &&
+                        (empleadoId === '' || tarima.empleadoId === empleadoId) &&
+                        (estado === 'todos' || tarima.estado === estado);
+
+                    if (cumpleFiltros) {
+                        resultados.push(tarima);
+                    }
+                });
+
+                mostrarResultadosReporte(resultados);
+            }).catch(error => {
+                console.error("Error al generar el reporte:", error);
+                updateStatus("❌ Error al generar el reporte. Intente de nuevo.", 'error');
+            });
+        }
+
+        function mostrarResultadosReporte(resultados) {
+            const listaResultados = document.getElementById("listaResultadosReporte");
+            if (resultados.length === 0) {
+                listaResultados.innerHTML = `<li>No se encontraron resultados con los filtros seleccionados.</li>`;
+                updateStatus("Reporte generado. 0 resultados encontrados.", 'info');
+                return;
+            }
+
+            let html = "";
+            let totalCajas = 0;
+            let totalPiezas = 0;
+
+            resultados.forEach(tarima => {
+                const numCajas = tarima.cajas ? Object.keys(tarima.cajas).length : 0;
+                totalCajas += numCajas;
+                let piezasTarima = 0;
+                let cajasHtml = "";
+                const cajasPorOrden = {};
+                if (tarima.cajas) {
+                    Object.values(tarima.cajas).forEach(caja => {
+                        piezasTarima += caja.cantidadPiezas || 0;
+                        const orden = caja.numeroOrden;
+                        if (!cajasPorOrden[orden]) {
+                            cajasPorOrden[orden] = [];
+                        }
+                        cajasPorOrden[orden].push(caja);
+                    });
+                }
+                totalPiezas += piezasTarima;
+
+                let ordenesHtml = "";
+                for (const orden in cajasPorOrden) {
+                    const cajasDeOrden = cajasPorOrden[orden];
+                    const totalPiezasOrden = cajasDeOrden.reduce((sum, caja) => sum + (caja.cantidadPiezas || 0), 0);
+                    const cajasListHtml = cajasDeOrden.map(c => `<li>${c.codigoCaja} (${c.cantidadPiezas} pz) - Estado: ${c.estadoFinal || 'N/A'}</li>`).join('');
+                    ordenesHtml += `
+                        <li style="margin-top: 10px;">
+                            Orden: ${orden} | Total Piezas: ${totalPiezasOrden}
+                            <button onclick="toggleCajas('orden-${tarima.id}-${orden}')" class="btn-secondary list-item-btn">Ver cajas</button>
+                            <ul id="orden-${tarima.id}-${orden}" style="display:none;">
+                                ${cajasListHtml}
+                            </ul>
+                        </li>
+                    `;
+                }
+
+                html += `
+                    <li>
+                        <h4>Tarima: ${tarima.id}</h4>
+                        <p><b>Recolector:</b> ${tarima.empleadoId}</p>
+                        <p><b>Turno:</b> ${tarima.turno}</p>
+                        <p><b>Fecha:</b> ${new Date(tarima.fechaCreacion).toLocaleDateString()}</p>
+                        <p><b>Estado:</b> ${tarima.estado}</p>
+                        <p><b>Cajas:</b> ${numCajas} | <b>Piezas:</b> ${piezasTarima}</p>
+                        <button onclick="toggleDiscrepancyDetails('tarima-${tarima.id}')" class="btn-secondary">Detalles de Órdenes</button>
+                        <div id="tarima-${tarima.id}" style="display: none; margin-top: 10px;">
+                            <ul style="padding-left: 20px;">
+                                ${ordenesHtml}
+                            </ul>
+                        </div>
+                    </li>
+                `;
+            });
+
+            listaResultados.innerHTML = `
+                <p style="font-weight: bold;">Resultados totales: ${resultados.length} tarimas | ${totalCajas} cajas | ${totalPiezas} piezas</p>
+                <hr>
+                ${html}
+            `;
+            updateStatus("Reporte generado correctamente.", 'success');
+        }
+
+        /**
+         * @description NUEVO BLOQUE: Dashboard de Monitoreo para Administradores
+         * Se agregó la UI para una vista general del estado de las tarimas.
+         */
+        function mostrarDashboardAdmin() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📈 Dashboard de Monitoreo</h2>
+                    <p>Vista general del estado de las tarimas.</p>
+                    <div id="dashboardResumen" style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-bottom: 20px;">
+                        <div style="background-color: #ffc107; color: black; padding: 15px; border-radius: 10px; margin: 5px; min-width: 120px;">
+                            <h4>Pendientes</h4>
+                            <h2 id="pendingCount">0</h2>
+                        </div>
+                        <div style="background-color: #4CAF50; color: white; padding: 15px; border-radius: 10px; margin: 5px; min-width: 120px;">
+                            <h4>Confirmadas</h4>
+                            <h2 id="confirmedCount">0</h2>
+                        </div>
+                        <div style="background-color: #ff3b30; color: white; padding: 15px; border-radius: 10px; margin: 5px; min-width: 120px;">
+                            <h4>Faltantes</h4>
+                            <h2 id="missingCount">0</h2>
+                        </div>
+                    </div>
+                    <button onclick="actualizarDashboard()" class="btn-primary">🔄 Actualizar datos</button>
+                    <button onclick="mostrarPantallaOpcionesRecoleccion('administrador')" class="btn-secondary">⬅️ Regresar</button>
+                    <div id="statusMessage"></div>
+                    <ul id="listaDashboardTarimas"></ul>
+                </div>
+            `;
+            actualizarDashboard();
+        }
+
+        function actualizarDashboard() {
+            updateStatus("Actualizando Dashboard...", 'info');
+            db.ref("tarimas").once("value").then(snapshot => {
+                let pending = 0;
+                let confirmed = 0;
+                let missing = 0;
+                let listaHtml = "";
+
+                snapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    const estado = tarima.estado;
+                    let cajasConFaltantes = 0;
+                    if (tarima.cajas) {
+                        cajasConFaltantes = Object.values(tarima.cajas).filter(caja => caja.estadoFinal === 'faltante').length;
+                    }
+
+                    if (estado === 'pendiente') {
+                        pending++;
+                        listaHtml += `<li>❌ **Tarima Pendiente:** ${tarima.id}</li>`;
+                    } else if (estado === 'confirmada') {
+                        confirmed++;
+                        listaHtml += `<li>✅ **Tarima Confirmada:** ${tarima.id}</li>`;
+                    } else if (estado === 'confirmadaConFaltantes') {
+                        missing++;
+                        listaHtml += `<li>⚠️ **Tarima con Faltantes:** ${tarima.id} (Faltantes: ${cajasConFaltantes})</li>`;
+                    }
+                });
+                
+                document.getElementById("pendingCount").textContent = pending;
+                document.getElementById("confirmedCount").textContent = confirmed;
+                document.getElementById("missingCount").textContent = missing;
+                document.getElementById("listaDashboardTarimas").innerHTML = listaHtml || '<li>No hay tarimas registradas.</li>';
+                updateStatus("Dashboard actualizado.", 'success');
+            }).catch(error => {
+                console.error("Error al actualizar el dashboard:", error);
+                updateStatus("❌ Error al cargar los datos del Dashboard.", 'error');
+            });
+        }
+
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
