@@ -198,6 +198,64 @@
             padding: 15px;
             margin-bottom: 10px;
         }
+
+        /**
+         * @description NUEVO BLOQUE: Estilos para escritorio (min-width: 768px)
+         * Se agregó un diseño más formal y espacioso para pantallas grandes.
+         */
+        @media (min-width: 768px) {
+            body {
+                background-color: #121212;
+            }
+            .card {
+                max-width: 1000px; /* Aumenta el ancho máximo para aprovechar el espacio */
+                padding: 40px;
+            }
+            h2 {
+                font-size: 2.5em;
+            }
+            h3, h4 {
+                font-size: 1.5em;
+            }
+            input, select {
+                padding: 15px;
+                font-size: 18px;
+            }
+            button {
+                padding: 18px 25px;
+                font-size: 18px;
+            }
+            /* Layout de 2 columnas para el dashboard y reportes */
+            .dashboard-container, .report-container {
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                gap: 30px;
+                text-align: left;
+            }
+            .dashboard-container .card, .report-container .card {
+                margin: 0;
+            }
+            .report-filters {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .report-results-list li {
+                padding: 20px;
+            }
+            #dashboardResumen {
+                display: flex;
+                justify-content: flex-start;
+            }
+            #dashboardResumen div {
+                min-width: 150px;
+                padding: 20px;
+            }
+            #dashboardResumen h4 {
+                font-size: 1.2em;
+            }
+            #dashboardResumen h2 {
+                font-size: 2.5em;
+            }
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -1444,7 +1502,7 @@
         function mostrarDashboardAdmin() {
             const contenedor = document.getElementById("pantalla5");
             contenedor.innerHTML = `
-                <div class="card">
+                <div class="card dashboard-container">
                     <h2>📈 Dashboard de Monitoreo</h2>
                     <p>Vista general del estado de las tarimas.</p>
                     <div id="dashboardResumen" style="display: flex; justify-content: space-around; flex-wrap: wrap; margin-bottom: 20px;">
