@@ -950,30 +950,25 @@
             db.ref(`tarimas/${tarimaAConfirmar}`).once("value").then(snapshot => {
                 const tarimaData = snapshot.val();
                 const cajas = tarimaData.cajas || {};
-                const cajasPendientes = Object.values(cajas).filter(caja => !caja.confirmado);
+                
+                const cajasPendientes = Object.entries(cajas).filter(([key, caja]) => !caja.confirmado);
 
                 if (cajasPendientes.length > 0) {
                     if (confirm(`Aún hay ${cajasPendientes.length} cajas pendientes. ¿Desea finalizar la confirmación y marcarlas como faltantes?`)) {
-                        const updates = {
-                            estado: 'confirmadaConFaltantes'
-                        };
-                        const cajasUpdates = {};
-                        cajasPendientes.forEach(caja => {
-                            const cajaKey = Object.keys(cajas).find(key => cajas[key].codigoCaja === caja.codigoCaja);
-                            if (cajaKey) {
-                                cajasUpdates[`/tarimas/${tarimaAConfirmar}/cajas/${cajaKey}/estadoFinal`] = 'faltante';
-                            }
+                        const updates = {};
+                        updates[`tarimas/${tarimaAConfirmar}/estado`] = 'confirmadaConFaltantes';
+                        
+                        cajasPendientes.forEach(([key, caja]) => {
+                            updates[`tarimas/${tarimaAConfirmar}/cajas/${key}/estadoFinal`] = 'faltante';
                         });
                         
                         db.ref().update(updates).then(() => {
-                            db.ref().update(cajasUpdates).then(() => {
-                                updateStatus(`⚠️ Tarima confirmada con faltantes.`, 'info');
-                                setTimeout(() => {
-                                    tarimaAConfirmar = null;
-                                    confirmadorActual = null;
-                                    mostrarPantallaInicio();
-                                }, 2000);
-                            });
+                            updateStatus(`⚠️ Tarima confirmada con faltantes.`, 'info');
+                            setTimeout(() => {
+                                tarimaAConfirmar = null;
+                                confirmadorActual = null;
+                                mostrarPantallaInicio();
+                            }, 2000);
                         }).catch(error => {
                             console.error("Error al finalizar con faltantes:", error);
                             updateStatus("❌ Error al finalizar. Intente de nuevo.", 'error');
