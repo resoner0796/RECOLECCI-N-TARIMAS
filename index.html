@@ -311,6 +311,7 @@
                     </div>
                     <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
                     <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
+                    <button onclick="mostrarAnalisisDiscrepancias()" class="btn-secondary">🔎 Ver Discrepancias</button>
                     <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
                     <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
                     <div id="tarimaContainer"></div>
@@ -676,7 +677,7 @@
                             cajasHtml += `<li>Caja: ${caja.codigoCaja} | Cantidad: ${caja.cantidadPiezas} | Estado: ${estadoConfirmacion}</li>`;
                         }
                     }
-                    const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : '❌ Pendiente';
+                    const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : (tarima.estado === 'confirmadaConFaltantes' ? '⚠️ Confirmada con faltantes' : '❌ Pendiente');
                     lista += `
                         <li>
                             Tarima: ${tarima.id} | Empleado: ${tarima.empleadoId} | Cajas: ${totalCajas}
@@ -724,7 +725,7 @@
                 snapshot.forEach(tarimaSnapshot => {
                     const tarima = tarimaSnapshot.val();
                     const fecha = new Date(tarima.fechaCreacion).toLocaleString();
-                    const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : '❌ Pendiente';
+                    const estadoTarima = tarima.estado === 'confirmada' ? '✅ Confirmada' : (tarima.estado === 'confirmadaConFaltantes' ? '⚠️ Confirmada con faltantes' : '❌ Pendiente');
                     lista += `
                         <li>
                             Tarima: ${tarima.id} | Turno: ${tarima.turno}
@@ -836,7 +837,7 @@
                     return;
                 }
 
-                if (tarimaEncontrada.estado === 'confirmada') {
+                if (tarimaEncontrada.estado === 'confirmada' || tarimaEncontrada.estado === 'confirmadaConFaltantes') {
                     updateStatus(`❌ Error: La tarima ${tarimaEncontrada.id} ya ha sido confirmada.`, 'error');
                     setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
                     return;
@@ -870,7 +871,7 @@
                     ${isMobile ? `<button id="btnEscCajaConf" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
                     <h4>Cajas pendientes</h4>
                     <ul id="listaCajasConfirmacion"></ul>
-                    <button onclick="terminarConfirmacion('${tarimaData.id}')" class="btn-green">✅ Finalizar Confirmación</button>
+                    <button onclick="terminarConfirmacion()" class="btn-green">✅ Finalizar Confirmación</button>
                     <button onclick="iniciarFlujoConfirmacion()" class="btn-danger">❌ Cancelar</button>
                 </div>
             `;
@@ -945,20 +946,98 @@
             });
         }
         
-        function terminarConfirmacion(idTarima) {
-            if (confirm("¿Está seguro de que todas las cajas han sido escaneadas? Una vez finalizado, no podrá agregar más confirmaciones.")) {
-                db.ref(`tarimas/${idTarima}`).update({
-                    estado: 'confirmada'
-                }).then(() => {
-                    updateStatus("✅ Tarima confirmada con éxito. Proceso finalizado.", 'success');
-                    tarimaAConfirmar = null;
-                    confirmadorActual = null;
-                    setTimeout(() => mostrarPantallaInicio(), 2000);
-                }).catch(error => {
-                    console.error("Error al finalizar la tarima:", error);
-                    updateStatus("❌ Error al finalizar. Intente de nuevo.", 'error');
-                });
-            }
+        function terminarConfirmacion() {
+            db.ref(`tarimas/${tarimaAConfirmar}`).once("value").then(snapshot => {
+                const tarimaData = snapshot.val();
+                const cajas = tarimaData.cajas || {};
+                const cajasPendientes = Object.values(cajas).filter(caja => !caja.confirmado);
+
+                if (cajasPendientes.length > 0) {
+                    if (confirm(`Aún hay ${cajasPendientes.length} cajas pendientes. ¿Desea finalizar la confirmación y marcarlas como faltantes?`)) {
+                        const updates = {
+                            estado: 'confirmadaConFaltantes'
+                        };
+                        const cajasUpdates = {};
+                        cajasPendientes.forEach(caja => {
+                            const cajaKey = Object.keys(cajas).find(key => cajas[key].codigoCaja === caja.codigoCaja);
+                            if (cajaKey) {
+                                cajasUpdates[`/tarimas/${tarimaAConfirmar}/cajas/${cajaKey}/estadoFinal`] = 'faltante';
+                            }
+                        });
+                        
+                        db.ref().update(updates).then(() => {
+                            db.ref().update(cajasUpdates).then(() => {
+                                updateStatus(`⚠️ Tarima confirmada con faltantes.`, 'info');
+                                setTimeout(() => {
+                                    tarimaAConfirmar = null;
+                                    confirmadorActual = null;
+                                    mostrarPantallaInicio();
+                                }, 2000);
+                            });
+                        }).catch(error => {
+                            console.error("Error al finalizar con faltantes:", error);
+                            updateStatus("❌ Error al finalizar. Intente de nuevo.", 'error');
+                        });
+                    }
+                } else {
+                    db.ref(`tarimas/${tarimaAConfirmar}`).update({
+                        estado: 'confirmada'
+                    }).then(() => {
+                        updateStatus("✅ Tarima confirmada con éxito. Proceso finalizado.", 'success');
+                        tarimaAConfirmar = null;
+                        confirmadorActual = null;
+                        setTimeout(() => mostrarPantallaInicio(), 2000);
+                    }).catch(error => {
+                        console.error("Error al finalizar la tarima:", error);
+                        updateStatus("❌ Error al finalizar. Intente de nuevo.", 'error');
+                    });
+                }
+            });
+        }
+
+        // --- NUEVA FUNCIÓN PARA ANÁLISIS DE DISCREPANCIAS ---
+        function mostrarAnalisisDiscrepancias() {
+            const contenedor = document.getElementById("pantalla5");
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>🔎 Análisis de Discrepancias</h2>
+                    <p>Tarimas confirmadas con cajas faltantes.</p>
+                    <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+                    <div id="statusMessage"></div>
+                    <ul id="listaDiscrepancias"></ul>
+                </div>
+            `;
+            updateStatus("Cargando tarimas con faltantes...", 'info');
+
+            db.ref("tarimas").orderByChild("estado").equalTo("confirmadaConFaltantes").once("value").then(snapshot => {
+                let lista = "";
+                if (!snapshot.exists()) {
+                    lista = `<li>✅ No se encontraron tarimas con discrepancias.</li>`;
+                } else {
+                    snapshot.forEach(tarimaSnapshot => {
+                        const tarima = tarimaSnapshot.val();
+                        const cajas = tarima.cajas || {};
+                        const cajasFaltantes = Object.values(cajas).filter(caja => caja.estadoFinal === 'faltante');
+                        if (cajasFaltantes.length > 0) {
+                            lista += `
+                                <li>
+                                    <h4>⚠️ Tarima: ${tarima.id}</h4>
+                                    <p>Recolector: ${tarima.empleadoId} | Fecha de confirmación: ${new Date(tarima.fechaConfirmacion).toLocaleString()}</p>
+                                    <p>Cajas faltantes: ${cajasFaltantes.length}</p>
+                                    <ul>
+                                        ${cajasFaltantes.map(caja => `<li>❌ ${caja.codigoCaja}</li>`).join('')}
+                                    </ul>
+                                </li>
+                            `;
+                        }
+                    });
+                }
+                document.getElementById("listaDiscrepancias").innerHTML = lista;
+                updateStatus("Análisis de discrepancias cargado.", 'success');
+            }).catch(error => {
+                console.error("Error al cargar las discrepancias:", error);
+                updateStatus("❌ Error al cargar las discrepancias. Intente de nuevo.", 'error');
+            });
         }
 
         // PWA Service Worker Registration
