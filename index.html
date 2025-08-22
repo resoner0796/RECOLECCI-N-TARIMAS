@@ -901,14 +901,35 @@
                 updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
                 return;
             }
-            db.ref(`tarimas/${tarimaAConfirmar}/cajas`).orderByChild("codigoCaja").equalTo(codigoCaja).once("value").then(snapshot => {
-                if (!snapshot.exists()) {
-                    updateStatus("❌ Error: Caja no encontrada en esta tarima.", 'error');
+            db.ref("tarimas").once("value").then(globalSnapshot => {
+                let tarimaCorrectaId = null;
+                let cajaData = null;
+                let cajaKey = null;
+
+                globalSnapshot.forEach(tarimaSnapshot => {
+                    const tarima = tarimaSnapshot.val();
+                    if (tarima.cajas) {
+                        const foundCajaKey = Object.keys(tarima.cajas).find(key => tarima.cajas[key].codigoCaja === codigoCaja);
+                        if (foundCajaKey) {
+                            tarimaCorrectaId = tarima.id;
+                            cajaData = tarima.cajas[foundCajaKey];
+                            cajaKey = foundCajaKey;
+                            return true; // Salir del bucle
+                        }
+                    }
+                });
+
+                if (!tarimaCorrectaId) {
+                    updateStatus("❌ Error: Caja no encontrada en ninguna tarima.", 'error');
                     return;
                 }
-                const cajaKey = Object.keys(snapshot.val())[0];
-                const cajaData = snapshot.val()[cajaKey];
+
+                if (tarimaCorrectaId !== tarimaAConfirmar) {
+                    updateStatus(`❌ Error: Esta caja pertenece a la tarima: ${tarimaCorrectaId}. Separe el material y continúe.`, 'error');
+                    return;
+                }
                 
+                // Si llegamos aquí, la caja pertenece a la tarima correcta.
                 if (cajaData.confirmado) {
                     const fecha = new Date(cajaData.fechaConfirmacion).toLocaleString();
                     const confirmador = cajaData.confirmadorId || 'No disponible';
