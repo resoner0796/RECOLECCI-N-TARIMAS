@@ -234,7 +234,6 @@
                     <div id="statusMessage" style="margin-top: 20px;"></div>
                 </div>
             `;
-            updateStatus("Bienvenido. Elija una opción.", 'info');
         }
 
         function iniciarFlujoRecoleccion() {
@@ -249,7 +248,7 @@
                     <button onclick="mostrarPantallaInicio()" class="btn-secondary">⬅️ Regresar</button>
                 </div>
             `;
-
+            updateStatus("Esperando escaneo de gafete...", 'info');
             const input = document.getElementById("empleadoInput");
             input.addEventListener("keypress", function(e) {
                 if (e.key === "Enter") {
@@ -815,12 +814,14 @@
 
             db.ref("tarimas").once("value").then(snapshot => {
                 let tarimaEncontrada = null;
+                let cajaEncontrada = null;
                 snapshot.forEach(tarimaSnapshot => {
                     const tarima = tarimaSnapshot.val();
                     if (tarima.cajas) {
                         for (let key in tarima.cajas) {
                             if (tarima.cajas[key].codigoCaja === codigoCaja) {
                                 tarimaEncontrada = tarima;
+                                cajaEncontrada = tarima.cajas[key];
                                 tarimaAConfirmar = tarima.id;
                                 break;
                             }
@@ -837,15 +838,17 @@
                     return;
                 }
 
-                if (tarimaEncontrada.estado === 'confirmada' || tarimaEncontrada.estado === 'confirmadaConFaltantes') {
-                    updateStatus(`❌ Error: La tarima ${tarimaEncontrada.id} ya ha sido confirmada.`, 'error');
-                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
+                // Check if the box is already confirmed
+                if (cajaEncontrada.confirmado) {
+                    const fecha = new Date(cajaEncontrada.fechaConfirmacion).toLocaleString();
+                    const confirmador = cajaEncontrada.confirmadorId || 'No disponible';
+                    updateStatus(`❌ Error: El BX ${codigoCaja} ya fue confirmado por ${confirmador} el ${fecha}.`, 'error');
+                    setTimeout(() => mostrarPantallaConfirmacionCaja(), 4000);
                     return;
                 }
                 
-                // Si la tarima es válida y está pendiente, mostramos el formulario de confirmación
+                // If the box is not confirmed, and the tarima is pending or has faltantes, proceed
                 mostrarFormularioConfirmacionCajas(tarimaEncontrada);
-                // También procesamos la caja que se escaneó inicialmente
                 procesarConfirmacionCaja(codigoCaja);
 
             }).catch(error => {
@@ -907,12 +910,15 @@
                 const cajaData = snapshot.val()[cajaKey];
                 
                 if (cajaData.confirmado) {
-                    updateStatus("❌ Error: Esta caja ya ha sido confirmada.", 'error');
+                    const fecha = new Date(cajaData.fechaConfirmacion).toLocaleString();
+                    const confirmador = cajaData.confirmadorId || 'No disponible';
+                    updateStatus(`❌ Error: El BX ${codigoCaja} ya fue confirmado por ${confirmador} el ${fecha}.`, 'error');
                 } else {
                     db.ref(`tarimas/${tarimaAConfirmar}/cajas/${cajaKey}`).update({
                         confirmado: true,
                         confirmadorId: confirmadorActual,
-                        fechaConfirmacion: new Date().toISOString()
+                        fechaConfirmacion: new Date().toISOString(),
+                        estadoFinal: 'confirmado'
                     }).then(() => {
                         updateStatus(`✅ Caja ${codigoCaja} confirmada.`, 'success');
                         actualizarListaConfirmacion(tarimaAConfirmar);
@@ -954,6 +960,10 @@
                 const cajasPendientes = Object.entries(cajas).filter(([key, caja]) => !caja.confirmado);
                 const updates = {};
                 
+                // Siempre actualizamos la fecha y el confirmador en el registro de la tarima
+                updates[`tarimas/${tarimaAConfirmar}/fechaConfirmacion`] = new Date().toISOString();
+                updates[`tarimas/${tarimaAConfirmar}/confirmadorId`] = confirmadorActual;
+
                 if (cajasPendientes.length > 0) {
                     if (confirm(`Aún hay ${cajasPendientes.length} cajas pendientes. ¿Desea finalizar la confirmación y marcarlas como faltantes?`)) {
                         updates[`tarimas/${tarimaAConfirmar}/estado`] = 'confirmadaConFaltantes';
@@ -961,9 +971,6 @@
                         cajasPendientes.forEach(([key, caja]) => {
                             updates[`tarimas/${tarimaAConfirmar}/cajas/${key}/estadoFinal`] = 'faltante';
                         });
-                        
-                        updates[`tarimas/${tarimaAConfirmar}/fechaConfirmacion`] = new Date().toISOString();
-                        updates[`tarimas/${tarimaAConfirmar}/confirmadorId`] = confirmadorActual;
                         
                         db.ref().update(updates).then(() => {
                             updateStatus(`⚠️ Tarima confirmada con faltantes.`, 'info');
@@ -979,8 +986,6 @@
                     }
                 } else {
                     updates[`tarimas/${tarimaAConfirmar}/estado`] = 'confirmada';
-                    updates[`tarimas/${tarimaAConfirmar}/fechaConfirmacion`] = new Date().toISOString();
-                    updates[`tarimas/${tarimaAConfirmar}/confirmadorId`] = confirmadorActual;
 
                     db.ref().update(updates).then(() => {
                         updateStatus("✅ Tarima confirmada con éxito. Proceso finalizado.", 'success');
@@ -1027,7 +1032,7 @@
                                     <div id="details-${tarima.id}" style="display:none; margin-top: 10px; border-top: 1px solid #3a3a3c; padding-top: 10px;">
                                         <p><b>Recolector:</b> ${tarima.empleadoId}</p>
                                         <p><b>Confirmador:</b> ${tarima.confirmadorId || 'No disponible'}</p>
-                                        <p><b>Fecha de confirmación:</b> ${fechaConfirmacionStr}</p>
+                                        <p><b>Fecha de última confirmación:</b> ${fechaConfirmacionStr}</p>
                                         <p><b>Cajas faltantes:</b> ${cajasFaltantes.length}</p>
                                         <ul>
                                             ${cajasFaltantes.map(caja => `<li>❌ ${caja.codigoCaja}</li>`).join('')}
