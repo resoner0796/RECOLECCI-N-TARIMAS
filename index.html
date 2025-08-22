@@ -211,10 +211,14 @@
         let scanning = false;
         let modo = "";
         let cantidadPiezasActual = null;
-        let confirmadorActual = null; // Variable para el confirmador
-        let tarimaAConfirmar = null; // Variable para la tarima a confirmar
+        let confirmadorActual = null;
+        let tarimaAConfirmar = null;
 
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // Listas de acceso
+        const administradores = ["528734", "626365"];
+        const recolectores = ["703329"];
 
         function updateStatus(message, type) {
             const statusDiv = document.getElementById("statusMessage");
@@ -241,30 +245,88 @@
             const contenedor = document.getElementById("pantalla5");
             contenedor.innerHTML = `
                 <div class="card">
-                    <h2>📦 Recolección</h2>
-                    <p>Escanee su número de empleado:</p>
+                    <h2>📦 Recolección - Iniciar sesión</h2>
+                    <p>Escanee su gafete para registrarse.</p>
                     <div id="statusMessage"></div>
-                    <input type="text" id="empleadoInput" placeholder="Escanear gafete">
-                    ${isMobile ? `<button id="btnEscEmpleado" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
+                    <input type="text" id="gafeteInput" placeholder="Escanear gafete">
+                    ${isMobile ? `<button id="btnEscGafete" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
                     <button onclick="mostrarPantallaInicio()" class="btn-secondary">⬅️ Regresar</button>
                 </div>
             `;
             updateStatus("Esperando escaneo de gafete...", 'info');
-            const input = document.getElementById("empleadoInput");
+            const input = document.getElementById("gafeteInput");
             input.addEventListener("keypress", function(e) {
                 if (e.key === "Enter") {
-                    empleadoActual = input.value.trim();
-                    input.value = "";
-                    updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
-                    setTimeout(() => mostrarPantallaPrincipal(), 1500);
+                    verificarAccesoRecoleccion(input.value.trim());
                 }
             });
 
             if (isMobile) {
-                document.getElementById("btnEscEmpleado").addEventListener("click", () => {
-                    iniciarEscaneo("empleadoRecoleccion");
+                document.getElementById("btnEscGafete").addEventListener("click", () => {
+                    iniciarEscaneo("gafeteRecoleccion");
                 });
             }
+        }
+
+        function verificarAccesoRecoleccion(gafete) {
+            empleadoActual = gafete;
+            let rol = null;
+            if (administradores.includes(gafete)) {
+                rol = 'administrador';
+            } else if (recolectores.includes(gafete)) {
+                rol = 'recolector';
+            }
+
+            if (rol) {
+                updateStatus(`¡Hola, ${rol === 'administrador' ? 'Administrador' : 'Recolector'}!`, 'success');
+                setTimeout(() => mostrarPantallaOpcionesRecoleccion(rol), 1500);
+            } else {
+                updateStatus("❌ Acceso denegado. Gafete no registrado para recolección.", 'error');
+                setTimeout(() => mostrarPantallaInicio(), 2000);
+            }
+        }
+        
+        function mostrarPantallaOpcionesRecoleccion(rol) {
+            const contenedor = document.getElementById("pantalla5");
+            const turnoActual = determinarTurno();
+
+            let buttonsHtml = "";
+            if (rol === 'administrador') {
+                buttonsHtml += `
+                    <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
+                    <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
+                    <button onclick="mostrarAnalisisDiscrepancias()" class="btn-secondary">🔎 Ver Discrepancias</button>
+                    <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
+                `;
+            } else if (rol === 'recolector') {
+                buttonsHtml += `
+                    <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
+                `;
+            }
+
+            contenedor.innerHTML = `
+                <div class="card">
+                    <h2>📦 Recolección</h2>
+                    <h3>Empleado: <b>${empleadoActual}</b></h3>
+                    <h4>Resumen de Turno (${turnoActual})</h4>
+                    <div id="resumenTurno" style="padding: 10px; background: #2c2c2e; border-radius: 8px;">
+                        Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
+                    </div>
+                    ${buttonsHtml}
+                    <button onclick="cerrarSesionRecoleccion()" class="btn-danger">❌ Cerrar sesión</button>
+                    <div id="tarimaContainer"></div>
+                </div>
+            `;
+            
+            actualizarResumenTurno();
+        }
+
+        function cerrarSesionRecoleccion() {
+            empleadoActual = null;
+            currentTarima = null;
+            cantidadPiezasActual = null;
+            updateStatus("Sesión de recolección cerrada.", 'info');
+            mostrarPantallaInicio();
         }
 
         function iniciarFlujoConfirmacion() {
@@ -297,30 +359,6 @@
             }
         }
 
-        function mostrarPantallaPrincipal() {
-            const contenedor = document.getElementById("pantalla5");
-            const turnoActual = determinarTurno();
-
-            contenedor.innerHTML = `
-                <div class="card">
-                    <h2>📦 Recolección</h2>
-                    <h3>Empleado: <b>${empleadoActual}</b></h3>
-                    <h4>Resumen de Turno (${turnoActual})</h4>
-                    <div id="resumenTurno" style="padding: 10px; background: #2c2c2e; border-radius: 8px;">
-                        Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b>
-                    </div>
-                    <button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button>
-                    <button onclick="mostrarTarimasCreadas()" class="btn-secondary">📋 Ver tarimas creadas</button>
-                    <button onclick="mostrarAnalisisDiscrepancias()" class="btn-secondary">🔎 Ver Discrepancias</button>
-                    <button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar/Eliminar tarimas</button>
-                    <button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button>
-                    <div id="tarimaContainer"></div>
-                </div>
-            `;
-
-            actualizarResumenTurno();
-        }
-
         function actualizarResumenTurno() {
             const turnoActual = determinarTurno();
             db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual).once("value").then(snapshot => {
@@ -335,8 +373,12 @@
                         }
                     }
                 });
-                document.getElementById("tarimasRegistradas").textContent = tarimasCount;
-                document.getElementById("cajasRegistradas").textContent = cajasCount;
+                const tarimasRegistradasElement = document.getElementById("tarimasRegistradas");
+                const cajasRegistradasElement = document.getElementById("cajasRegistradas");
+                if (tarimasRegistradasElement && cajasRegistradasElement) {
+                    tarimasRegistradasElement.textContent = tarimasCount;
+                    cajasRegistradasElement.textContent = cajasCount;
+                }
             });
         }
 
@@ -370,10 +412,8 @@
 
                 const result = await codeReader.decodeOnceFromVideoDevice(undefined, 'preview', constraints);
                 
-                if (modo === "empleadoRecoleccion") {
-                    empleadoActual = result.text.trim();
-                    updateStatus(`¡Hola, ${empleadoActual}!`, 'success');
-                    setTimeout(() => mostrarPantallaPrincipal(), 1500);
+                if (modo === "gafeteRecoleccion") {
+                    verificarAccesoRecoleccion(result.text.trim());
                 } else if (modo === "confirmador") {
                     confirmadorActual = result.text.trim();
                     updateStatus(`Confirmador: ${confirmadorActual} registrado.`, 'success');
@@ -467,7 +507,7 @@
                 db.ref(`tarimas/${idTarima}`).remove()
                     .then(() => {
                         updateStatus("✅ Creación de tarima cancelada y eliminada.", 'success');
-                        mostrarPantallaPrincipal();
+                        mostrarPantallaOpcionesRecoleccion(administradores.includes(empleadoActual) ? 'administrador' : 'recolector');
                     })
                     .catch(error => {
                         console.error("Error al cancelar la tarima:", error);
@@ -596,9 +636,12 @@
                         </li>
                     `;
                 }
-                document.getElementById("resumenTarima").innerText =
-                    `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
-                document.getElementById("listaCajas").innerHTML = lista;
+                const resumenTarimaElement = document.getElementById("resumenTarima");
+                const listaCajasElement = document.getElementById("listaCajas");
+                if (resumenTarimaElement && listaCajasElement) {
+                    resumenTarimaElement.innerText = `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
+                    listaCajasElement.innerHTML = lista;
+                }
                 actualizarResumenTurno();
             });
         }
@@ -623,7 +666,7 @@
                 const totalCajas = cajas ? Object.keys(cajas).length : 0;
                 const cajasAInspeccionar = Math.ceil(totalCajas * 0.20);
                 mostrarPopupInspeccion(idTarima, totalCajas, cajasAInspeccionar);
-                mostrarPantallaPrincipal();
+                mostrarPantallaOpcionesRecoleccion(administradores.includes(empleadoActual) ? 'administrador' : 'recolector');
                 updateStatus("Listo para crear una nueva tarima.", 'info');
             });
         }
@@ -656,7 +699,7 @@
                 <div class="card">
                     <h2>📋 Historial de Tarimas</h2>
                     <p>Aquí puedes ver todas las tarimas registradas.</p>
-                    <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+                    <button onclick="mostrarPantallaOpcionesRecoleccion('administrador')" class="btn-primary">⬅️ Regresar</button>
                     <div id="statusMessage"></div>
                     <ul id="listaTarimas"></ul>
                 </div>
@@ -715,7 +758,7 @@
                 <div class="card">
                     <h2>📝 Editar/Eliminar Tarimas</h2>
                     <p>Seleccione una tarima para editar o eliminar.</p>
-                    <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+                    <button onclick="mostrarPantallaOpcionesRecoleccion('administrador')" class="btn-primary">⬅️ Regresar</button>
                     <div id="statusMessage"></div>
                     <ul id="listaEdicionTarimas"></ul>
                 </div>
@@ -768,16 +811,6 @@
             }
         }
 
-        function cerrarSesion() {
-            empleadoActual = null;
-            currentTarima = null;
-            cantidadPiezasActual = null;
-            confirmadorActual = null;
-            tarimaAConfirmar = null;
-            mostrarPantallaInicio();
-            updateStatus("Sesión cerrada. Escanee su gafete para iniciar.", 'info');
-        }
-
         // --- FUNCIONES DE CONFIRMACIÓN ---
 
         function mostrarPantallaConfirmacionCaja() {
@@ -786,7 +819,7 @@
                 <div class="card">
                     <h2>✅ Confirmación de Tarima</h2>
                     <h3>Confirmador: <b>${confirmadorActual}</b></h3>
-                    <p>Paso 2: Escanee el código de una caja (BX) de la tarima a confirmar.</p>
+                    <p>Escanee el código de una caja (BX) de la tarima a confirmar.</p>
                     <div id="statusMessage"></div>
                     <input type="text" id="cajaConfirmacionInput" placeholder="Escanear BX-XXX">
                     ${isMobile ? `<button id="btnEscCajaConf" class="btn-primary">📷 Iniciar escaneo</button>` : ""}
@@ -841,7 +874,6 @@
                     return;
                 }
 
-                // Check if the box is already confirmed
                 if (cajaEncontrada.confirmado) {
                     const fecha = new Date(cajaEncontrada.fechaConfirmacion).toLocaleString();
                     const confirmador = cajaEncontrada.confirmadorId || 'No disponible';
@@ -850,7 +882,6 @@
                     return;
                 }
                 
-                // If the box is not confirmed, and the tarima is pending or has faltantes, proceed
                 mostrarFormularioConfirmacionCajas(tarimaEncontrada);
                 procesarConfirmacionCaja(codigoCaja);
 
@@ -932,7 +963,6 @@
                     return;
                 }
                 
-                // Si llegamos aquí, la caja pertenece a la tarima correcta.
                 if (cajaData.confirmado) {
                     const fecha = new Date(cajaData.fechaConfirmacion).toLocaleString();
                     const confirmador = cajaData.confirmadorId || 'No disponible';
@@ -984,7 +1014,6 @@
                 const cajasPendientes = Object.entries(cajas).filter(([key, caja]) => !caja.confirmado);
                 const updates = {};
                 
-                // Siempre actualizamos la fecha y el confirmador en el registro de la tarima
                 updates[`tarimas/${tarimaAConfirmar}/fechaConfirmacion`] = new Date().toISOString();
                 updates[`tarimas/${tarimaAConfirmar}/confirmadorId`] = confirmadorActual;
 
@@ -1127,7 +1156,7 @@
                 <div class="card">
                     <h2>🔎 Análisis de Discrepancias</h2>
                     <p>Tarimas confirmadas con cajas faltantes.</p>
-                    <button onclick="mostrarPantallaPrincipal()" class="btn-primary">⬅️ Regresar</button>
+                    <button onclick="mostrarPantallaOpcionesRecoleccion('administrador')" class="btn-primary">⬅️ Regresar</button>
                     <div id="statusMessage"></div>
                     <ul id="listaDiscrepancias"></ul>
                 </div>
@@ -1181,7 +1210,6 @@
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Se usa la ruta relativa del archivo para que funcione con GitHub Pages
                 const path = window.location.pathname.split('/').slice(0, -1).join('/');
                 navigator.serviceWorker.register(`${path}/sw.js`, { scope: `${path}/` })
                     .then(reg => {
