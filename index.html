@@ -952,15 +952,18 @@
                 const cajas = tarimaData.cajas || {};
                 
                 const cajasPendientes = Object.entries(cajas).filter(([key, caja]) => !caja.confirmado);
-
+                const updates = {};
+                
                 if (cajasPendientes.length > 0) {
                     if (confirm(`Aún hay ${cajasPendientes.length} cajas pendientes. ¿Desea finalizar la confirmación y marcarlas como faltantes?`)) {
-                        const updates = {};
                         updates[`tarimas/${tarimaAConfirmar}/estado`] = 'confirmadaConFaltantes';
                         
                         cajasPendientes.forEach(([key, caja]) => {
                             updates[`tarimas/${tarimaAConfirmar}/cajas/${key}/estadoFinal`] = 'faltante';
                         });
+                        
+                        updates[`tarimas/${tarimaAConfirmar}/fechaConfirmacion`] = new Date().toISOString();
+                        updates[`tarimas/${tarimaAConfirmar}/confirmadorId`] = confirmadorActual;
                         
                         db.ref().update(updates).then(() => {
                             updateStatus(`⚠️ Tarima confirmada con faltantes.`, 'info');
@@ -975,9 +978,11 @@
                         });
                     }
                 } else {
-                    db.ref(`tarimas/${tarimaAConfirmar}`).update({
-                        estado: 'confirmada'
-                    }).then(() => {
+                    updates[`tarimas/${tarimaAConfirmar}/estado`] = 'confirmada';
+                    updates[`tarimas/${tarimaAConfirmar}/fechaConfirmacion`] = new Date().toISOString();
+                    updates[`tarimas/${tarimaAConfirmar}/confirmadorId`] = confirmadorActual;
+
+                    db.ref().update(updates).then(() => {
                         updateStatus("✅ Tarima confirmada con éxito. Proceso finalizado.", 'success');
                         tarimaAConfirmar = null;
                         confirmadorActual = null;
@@ -1013,15 +1018,21 @@
                         const tarima = tarimaSnapshot.val();
                         const cajas = tarima.cajas || {};
                         const cajasFaltantes = Object.values(cajas).filter(caja => caja.estadoFinal === 'faltante');
+                        
                         if (cajasFaltantes.length > 0) {
+                            const fechaConfirmacionStr = tarima.fechaConfirmacion ? new Date(tarima.fechaConfirmacion).toLocaleString() : 'Fecha no disponible';
                             lista += `
-                                <li>
+                                <li onclick="toggleDiscrepancyDetails('details-${tarima.id}')" style="cursor: pointer;">
                                     <h4>⚠️ Tarima: ${tarima.id}</h4>
-                                    <p>Recolector: ${tarima.empleadoId} | Fecha de confirmación: ${new Date(tarima.fechaConfirmacion).toLocaleString()}</p>
-                                    <p>Cajas faltantes: ${cajasFaltantes.length}</p>
-                                    <ul>
-                                        ${cajasFaltantes.map(caja => `<li>❌ ${caja.codigoCaja}</li>`).join('')}
-                                    </ul>
+                                    <div id="details-${tarima.id}" style="display:none; margin-top: 10px; border-top: 1px solid #3a3a3c; padding-top: 10px;">
+                                        <p><b>Recolector:</b> ${tarima.empleadoId}</p>
+                                        <p><b>Confirmador:</b> ${tarima.confirmadorId || 'No disponible'}</p>
+                                        <p><b>Fecha de confirmación:</b> ${fechaConfirmacionStr}</p>
+                                        <p><b>Cajas faltantes:</b> ${cajasFaltantes.length}</p>
+                                        <ul>
+                                            ${cajasFaltantes.map(caja => `<li>❌ ${caja.codigoCaja}</li>`).join('')}
+                                        </ul>
+                                    </div>
                                 </li>
                             `;
                         }
@@ -1033,6 +1044,13 @@
                 console.error("Error al cargar las discrepancias:", error);
                 updateStatus("❌ Error al cargar las discrepancias. Intente de nuevo.", 'error');
             });
+        }
+        
+        function toggleDiscrepancyDetails(id) {
+            const detailsDiv = document.getElementById(id);
+            if (detailsDiv) {
+                detailsDiv.style.display = detailsDiv.style.display === "none" ? "block" : "none";
+            }
         }
 
         // PWA Service Worker Registration
