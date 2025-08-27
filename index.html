@@ -628,7 +628,7 @@
                 input.value = "";
                 return;
             }
-            if (!valor.startsWith('bx')) {
+            if (!valor.startsWith('bx', 'BX')) {
                 updateStatus("❌ Error: El código de caja debe empezar con 'BX'. Caja no agregada.", 'error');
                 input.value = "";
                 return;
