@@ -628,7 +628,8 @@
                 input.value = "";
                 return;
             }
-            if (!valor.startsWith('BX')) {
+            // *** CORRECCIÓN: CAMBIO PARA QUE LA VALIDACIÓN DE 'BX' SEA INSENSIBLE A MAYÚSCULAS/MINÚSCULAS ***
+            if (!valor.toUpperCase().startsWith('BX')) {
                 updateStatus("❌ Error: El código de caja debe empezar con 'BX'. Caja no agregada.", 'error');
                 input.value = "";
                 return;
@@ -984,7 +985,8 @@
         }
 
         function buscarTarimaPorCaja(codigoCaja) {
-            if (!codigoCaja.startsWith('BX')) {
+            // *** CORRECCIÓN: CAMBIO PARA QUE LA VALIDACIÓN DE 'BX' SEA INSENSIBLE A MAYÚSCULAS/MINÚSCULAS ***
+            if (!codigoCaja.toUpperCase().startsWith('BX')) {
                 updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
                 setTimeout(() => mostrarPantallaConfirmacionCaja(), 1500);
                 return;
@@ -1073,7 +1075,8 @@
         }
 
         function procesarConfirmacionCaja(codigoCaja) {
-            if (!codigoCaja.startsWith('BX')) {
+            // *** CORRECCIÓN: CAMBIO PARA QUE LA VALIDACIÓN DE 'BX' SEA INSENSIBLE A MAYÚSCULAS/MINÚSCULAS ***
+            if (!codigoCaja.toUpperCase().startsWith('BX')) {
                 updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
                 return;
             }
@@ -1225,7 +1228,8 @@
         }
 
         function buscarYMostrarInfoBX(codigoCaja) {
-            if (!codigoCaja.startsWith('BX')) {
+            // *** CORRECCIÓN: CAMBIO PARA QUE LA VALIDACIÓN DE 'BX' SEA INSENSIBLE A MAYÚSCULAS/MINÚSCULAS ***
+            if (!codigoCaja.toUpperCase().startsWith('BX')) {
                 updateStatus("❌ Error: El código de caja debe empezar con 'BX'.", 'error');
                 return;
             }
