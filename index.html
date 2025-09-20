@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Recolección - Pro v5</title>
+    <title>Recolección - Pro v6</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <style>
@@ -84,7 +84,7 @@
         button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
         button:active { transform: translateY(0); filter: brightness(0.9); }
 
-        /* --- MODIFICADO: Estilos de Listas para UI Limpia y Desplegable --- */
+        /* Estilos de Listas para UI Limpia y Desplegable */
         ul { padding-left: 0; list-style: none; }
         li.tarima-item {
             margin-bottom: 10px;
@@ -126,7 +126,19 @@
         }
         
         .workflow-status { font-size: 0.9em; width: 100%; margin-top: 8px; font-weight: bold; color: #E5E7EB;}
-        .workflow-timestamps { font-size: 0.8em; color: #9CA3AF; margin-top: 5px; }
+        
+        /* --- MODIFICADO: Estilos para Trazabilidad Vertical --- */
+        .workflow-timestamps { font-size: 0.8em; color: #9CA3AF; margin-top: 8px; }
+        .workflow-timestamps ul {
+            list-style: none;
+            padding-left: 10px;
+            margin: 5px 0 0 0;
+        }
+        .workflow-timestamps li {
+            background: none;
+            padding: 2px 0;
+            margin-bottom: 0;
+        }
         
         .cajas-desplegables {
             list-style: disc;
@@ -149,7 +161,6 @@
             margin-top: 0;
             margin-bottom: 10px;
         }
-
 
         /* Mensajes de Estado */
         #statusMessage { padding: 12px; margin: 15px 0; border-radius: 10px; font-weight: bold; text-align: center; }
@@ -341,7 +352,6 @@
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
 
-    // --- MODIFICADO: Renombrada para ser más genérica ---
     function toggleDetalles(id) {
         const el = document.getElementById(id);
         if (el) {
@@ -495,7 +505,6 @@
         cargarListaEdicionTarimas(false);
     }
     
-    // --- MODIFICADO: Lógica de renderizado para UI limpia ---
     async function cargarListaEdicionTarimas(soloPropias) {
         updateStatus("Cargando tarimas...", 'info');
         const query = soloPropias ? db.ref("tarimas").orderByChild("empleadoId").equalTo(empleadoActual.id) : db.ref("tarimas");
@@ -523,8 +532,7 @@
                     <div class="edit-delete-btns">
                         <button onclick="editarTarima('${tarima.id}')" class="btn-primary">✏️ Editar</button>
                         <button onclick="eliminarTarima('${tarima.id}', ${soloPropias})" class="btn-danger">🗑️ Eliminar</button>
-                    </div>
-                `;
+                    </div>`;
 
                 lista += `
                     <li class="tarima-item" onclick="toggleDetalles('detalles-${tarima.id}')">
@@ -555,6 +563,7 @@
         return resultado;
     }
 
+    // --- MODIFICADO: Lógica de trazabilidad para mostrar en vertical ---
     function determinarEstadoCompleto(tarima, logs) {
         const recolectada = logs.find(log => log.accion === 'recolectada');
         const confirmadaProd = logs.find(log => log.accion === 'confirmada_en_produccion');
@@ -568,13 +577,17 @@
         const tsProd = confirmadaProd?.timestamp;
         const tsLogistica = recolectada?.horaApagado;
 
-        let timestampsHtml = `<div class="workflow-timestamps"><b>Trazabilidad:</b> `;
-        if(tsCalidad) timestampsHtml += `<small>Calidad: ${formatoFechaHora(tsCalidad)}</small>`;
-        if(tsProd) timestampsHtml += `<small> | Prod: ${formatoFechaHora(tsProd)}</small>`;
-        if(tsLogistica) timestampsHtml += `<small> | Log: ${formatoFechaHora(tsLogistica)}</small>`;
-        timestampsHtml += `</div>`;
+        const timestampsItems = [];
+        if(tsCalidad) timestampsItems.push(`<li><small>Calidad: ${formatoFechaHora(tsCalidad)}</small></li>`);
+        if(tsProd) timestampsItems.push(`<li><small>Producción: ${formatoFechaHora(tsProd)}</small></li>`);
+        if(tsLogistica) timestampsItems.push(`<li><small>Logística: ${formatoFechaHora(tsLogistica)}</small></li>`);
         
-        return `<div class="workflow-status"><b>Estado:</b> ${statusText}</div>${(tsCalidad || tsProd || tsLogistica) ? timestampsHtml : ''}`;
+        let timestampsHtml = '';
+        if (timestampsItems.length > 0) {
+            timestampsHtml = `<div class="workflow-timestamps"><b>Trazabilidad:</b><ul>${timestampsItems.join('')}</ul></div>`;
+        }
+        
+        return `<div class="workflow-status"><b>Estado:</b> ${statusText}</div>${timestampsHtml}`;
     }
 
     function editarTarima(idTarima) {
