@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Recolección - Pro v8</title>
+    <title>Recolección - Pro Final</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="manifest.json">
     <style>
@@ -102,7 +102,11 @@
         li.tarima-item:hover {
             background: rgba(255, 255, 255, 0.15);
         }
-        .tarima-item-header-simple {
+        .tarima-item-header, .tarima-item-header-simple {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
             font-weight: bold;
             font-size: 1.1em;
         }
@@ -123,6 +127,12 @@
             padding: 8px 15px; 
             margin: 0;
             flex-grow: 1;
+        }
+        .list-item-btn {
+            width: auto !important;
+            padding: 8px 15px !important;
+            margin: 0 !important;
+            flex-shrink: 0;
         }
         
         .workflow-status { font-size: 0.9em; width: 100%; margin-top: 8px; font-weight: bold; color: #E5E7EB;}
@@ -166,6 +176,9 @@
             margin-bottom: 0;
             font-size: 0.9em;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         .cajas-desplegables li:last-child {
             border-bottom: none;
@@ -295,7 +308,7 @@
     function mostrarModal(type, title, message, callback) {
         const modalContainer = document.getElementById('modalContainer');
         const id = 'modal-' + Date.now();
-        let bodyHtml = (message.startsWith('<')) ? message : `<p>${message}</p>`; // Permite pasar HTML directamente
+        let bodyHtml = (message.startsWith('<')) ? message : `<p>${message}</p>`;
         let footerHtml = '';
         const closeModal = (value) => {
             const modalEl = document.getElementById(id);
@@ -307,7 +320,7 @@
             footerHtml = `<button class="btn-secondary">Cancelar</button><button class="btn-primary">Aceptar</button>`;
         } else if (type === 'confirm') {
             footerHtml = `<button class="btn-secondary">Cancelar</button><button class="btn-primary">Aceptar</button>`;
-        } else { // alert
+        } else {
             footerHtml = `<button class="btn-primary">Aceptar</button>`;
         }
         modalContainer.innerHTML += `<div class="modal-backdrop" id="${id}"><div class="modal-content"><div class="modal-header"><h3>${title}</h3></div><div class="modal-body">${bodyHtml}</div><div class="modal-footer">${footerHtml}</div></div></div>`;
@@ -493,25 +506,67 @@
     function crearNuevaTarima() { db.ref("tarimas").orderByKey().limitToLast(1).once("value").then(s => { let n=1; if(s.exists()){const i=parseInt(Object.keys(s.val())[0].split('-')[1]);if(!isNaN(i))n=i+1} const id="TAR-"+String(n).padStart(3,'0'); currentTarima=id; cantidadPiezasActual=null; db.ref("tarimas/"+id).set({id,empleadoId:empleadoActual.id,fechaCreacion:new Date().toISOString(),turno:determinarTurno(),cajas:{},estado:'pendiente'}).then(()=>mostrarFormularioTarima(id))})}
     function mostrarFormularioTarima(id){document.getElementById("pantallaPrincipal").innerHTML=`<div class="card"><h3>Tarima: ${id}</h3><h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual||'Sin seleccionar'}</span></h4><div id="statusMessage"></div><input type="text" id="codigoCaja" placeholder="Escanear Cantidad o Código BX">${isMobile?`<button id="btnEscCaja" class="btn-primary">📷 Escanear</button>`:""}<h4>Resumen</h4><div id="resumenTarima" style="padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">Cajas: 0 | Piezas: 0</div><h4>Cajas Registradas</h4><ul id="listaCajas"></ul><button onclick="terminarRegistroTarima('${id}')" class="btn-orange">✅ Terminar</button><button onclick="cancelarCreacionTarima('${id}')" class="btn-danger">❌ Cancelar</button></div>`;updateStatus(`Escanee un código de cantidad (${appConfig.cantidadesPiezas}) para empezar.`,'info');if(isMobile)document.getElementById("btnEscCaja").addEventListener("click",()=>iniciarEscaneo("caja"));document.getElementById("codigoCaja").addEventListener("keypress",e=>{if(e.key==="Enter")procesarEscaneo(e.target.value.trim(),id)});actualizarResumenTarima(id)}
     function procesarEscaneo(v,id){const i=document.getElementById("codigoCaja"),c=appConfig.cantidadesPiezas.split(',').map(Number),p=parseInt(v);if(c.includes(p)){cantidadPiezasActual=p;document.getElementById("cantidadActual").textContent=p;updateStatus(`✅ Cantidad establecida a ${p}.`,'success');i.value="";return}if(!v.toUpperCase().startsWith('BX')){updateStatus("❌ El código debe empezar con 'BX'.",'error');i.value="";return}if(cantidadPiezasActual===null){updateStatus(`❌ Primero escanee la cantidad (${appConfig.cantidadesPiezas}).`,'error');i.value="";return}const b=v.trim();db.ref("tarimas").once("value").then(s=>{let e=!1,t=null;s.forEach(a=>{if(a.val().cajas&&Object.values(a.val().cajas).find(c=>c.codigoCaja===b)){e=!0;t=a.key}});if(e){updateStatus(`❌ BX ya agregado a la tarima: ${t}`,'error');i.value="";return}const d={codigoCaja:b,numeroOrden:b.substring(2,12),cantidadPiezas:cantidadPiezasActual,empleadoId:empleadoActual.id,turno:determinarTurno(),timestamp:new Date().toISOString()};db.ref(`tarimas/${id}/cajas`).push().set(d).then(()=>{updateStatus(`📦 Caja ${b} guardada.`,'success');actualizarResumenTarima(id)})});i.value=""}
-    function actualizarResumenTarima(id){db.ref(`tarimas/${id}/cajas`).once("value").then(s=>{const c=s.val()||{},t=Object.keys(c).length;let p=0,l="",o={};s.forEach(a=>{const e=a.val();p+=e.cantidadPiezas||0;if(!o[e.numeroOrden])o[e.numeroOrden]=[];o[e.numeroOrden].push({id:a.key,...e})});for(const a in o){const e=o[a].reduce((s,c)=>s+c.cantidadPiezas,0);l+=`<li class="tarima-item"><div>Orden: ${a} | Piezas: ${e}</div></li>`}const a=document.getElementById("resumenTarima"),e=document.getElementById("listaCajas");if(a&&e){a.innerText=`Cajas: ${t} | Piezas: ${p}`;e.innerHTML=l}actualizarResumenTurno()})}
     
-    // --- MODIFICADO: Función terminarRegistroTarima con modal de inspección ---
+    // --- MODIFICADO: actualizarResumenTarima ahora muestra desglose de BX ---
+    function actualizarResumenTarima(idTarima) {
+        db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
+            const cajas = snapshot.val() || {};
+            const totalCajas = Object.keys(cajas).length;
+            let totalPiezas = 0;
+            let listaHtml = "";
+            const cajasPorOrden = {};
+
+            snapshot.forEach(cajaSnapshot => {
+                const caja = cajaSnapshot.val();
+                totalPiezas += caja.cantidadPiezas || 0;
+                if (!cajasPorOrden[caja.numeroOrden]) cajasPorOrden[caja.numeroOrden] = [];
+                cajasPorOrden[caja.numeroOrden].push({ id: cajaSnapshot.key, ...caja });
+            });
+
+            for (const orden in cajasPorOrden) {
+                const totalPiezasOrden = cajasPorOrden[orden].reduce((sum, c) => sum + c.cantidadPiezas, 0);
+                const cajasHtml = cajasPorOrden[orden].map(c => `<li>${c.codigoCaja} <button onclick="event.stopPropagation(); eliminarCaja('${idTarima}', '${c.id}')" class="btn-danger list-item-btn">🗑️</button></li>`).join('');
+                
+                listaHtml += `
+                    <li class="tarima-item">
+                        <div class="tarima-item-header" onclick="toggleDetalles('cajas-orden-${orden}')">
+                            <div>Orden: ${orden} | Piezas: ${totalPiezasOrden}</div>
+                            <button class="btn-secondary list-item-btn">Ver Cajas</button>
+                        </div>
+                        <ul class="cajas-desplegables" id="cajas-orden-${orden}" style="display:none;">
+                            ${cajasHtml}
+                        </ul>
+                    </li>`;
+            }
+
+            const resumenEl = document.getElementById("resumenTarima");
+            const listaEl = document.getElementById("listaCajas");
+            if (resumenEl && listaEl) {
+                resumenEl.innerText = `Cajas: ${totalCajas} | Piezas: ${totalPiezas}`;
+                listaEl.innerHTML = listaHtml;
+            }
+            actualizarResumenTurno();
+        });
+    }
+
+    function eliminarCaja(idTarima, idCaja) {
+        mostrarModal('confirm', 'Confirmar', '¿Eliminar esta caja?', (confirmed) => {
+            if (confirmed) {
+                db.ref(`tarimas/${idTarima}/cajas/${idCaja}`).remove().then(() => {
+                    updateStatus("Caja eliminada.", 'success');
+                    actualizarResumenTarima(idTarima);
+                });
+            }
+        });
+    }
+    
     function terminarRegistroTarima(idTarima) {
         mostrarPantallaOpcionesRecoleccion();
         db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
             const cajas = snapshot.val();
             const totalCajas = cajas ? Object.keys(cajas).length : 0;
             const cajasAInspeccionar = Math.ceil(totalCajas * 0.20);
-            const mensaje = `
-                <div style="text-align: left; line-height: 1.6;">
-                    ID de Tarima: <b>${idTarima}</b><br>
-                    Total de cajas: <b>${totalCajas}</b>
-                </div>
-                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
-                <div style="font-size: 1.1em; font-weight: bold; color: #F59E0B;">
-                    CAJAS A INSPECCIONAR:
-                    <div style="font-size: 1.8em; margin-top: 5px;">${cajasAInspeccionar}</div>
-                </div>`;
+            const mensaje = `<div style="text-align: left; line-height: 1.6;">ID de Tarima: <b>${idTarima}</b><br>Total de cajas: <b>${totalCajas}</b></div><hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;"><div style="font-size: 1.1em; font-weight: bold; color: #F59E0B;">CAJAS A INSPECCIONAR:<div style="font-size: 1.8em; margin-top: 5px;">${cajasAInspeccionar}</div></div>`;
             mostrarModal('alert', '✅ Registro Finalizado', mensaje);
         });
     }
@@ -553,25 +608,8 @@
             tarimasArray.reverse().forEach(tarima => {
                 if (!tarima.id) return;
                 const cajasHtml = Object.values(tarima.cajas || {}).map(caja => `<li>${caja.codigoCaja} (${caja.cantidadPiezas} pz)</li>`).join('');
-                const detallesHtml = `
-                    <p style="margin: 0;"><b>Fecha:</b> ${formatoFechaHora(tarima.fechaCreacion)} | <b>Creada por:</b> ${tarima.empleadoId}</p>
-                    ${determinarEstadoCompleto(tarima, logsPorTarima[tarima.id] || [])}
-                    <div class="cajas-desplegables">
-                        <h4>Contenido (BX):</h4>
-                        <ul>${cajasHtml || '<li>No hay cajas registradas.</li>'}</ul>
-                    </div>
-                    <div class="edit-delete-btns">
-                        <button onclick="editarTarima('${tarima.id}')" class="btn-primary">✏️ Editar</button>
-                        <button onclick="eliminarTarima('${tarima.id}', ${soloPropias})" class="btn-danger">🗑️ Eliminar</button>
-                    </div>`;
-
-                lista += `
-                    <li class="tarima-item" onclick="toggleDetalles('detalles-${tarima.id}')">
-                        <div class="tarima-item-header-simple">Tarima: ${tarima.id}</div>
-                        <div class="tarima-detalles-desplegables" id="detalles-${tarima.id}" style="display:none;">
-                            ${detallesHtml}
-                        </div>
-                    </li>`;
+                const detallesHtml = `<p style="margin: 0;"><b>Fecha:</b> ${formatoFechaHora(tarima.fechaCreacion)} | <b>Creada por:</b> ${tarima.empleadoId}</p>${determinarEstadoCompleto(tarima, logsPorTarima[tarima.id] || [])}<div class="cajas-desplegables"><h4>Contenido (BX):</h4><ul>${cajasHtml || '<li>No hay cajas registradas.</li>'}</ul></div><div class="edit-delete-btns"><button onclick="editarTarima('${tarima.id}')" class="btn-primary">✏️ Editar</button><button onclick="eliminarTarima('${tarima.id}', ${soloPropias})" class="btn-danger">🗑️ Eliminar</button></div>`;
+                lista += `<li class="tarima-item" onclick="toggleDetalles('detalles-${tarima.id}')"><div class="tarima-item-header-simple">Tarima: ${tarima.id}</div><div class="tarima-detalles-desplegables" id="detalles-${tarima.id}" style="display:none;">${detallesHtml}</div></li>`;
             });
         }
         document.getElementById("listaEdicionTarimas").innerHTML = lista;
