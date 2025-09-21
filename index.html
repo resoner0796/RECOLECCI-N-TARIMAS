@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <title>Recolección - Pro Final</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#203a43">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+
     <style>
         /* Estilos Generales y de Fondo */
         body {
@@ -266,14 +270,75 @@
             border-radius: 8px;
             font-size: 0.9em;
         }
+        
+        /* --- NUEVO: Estilos del Splash Screen --- */
+        .pantalla {
+          display: none;
+          width: 100%;
+          min-height: 100vh;
+          padding: 20px;
+          transition: opacity 0.5s ease-out;
+        }
+        .pantalla.activa { display: flex; flex-direction: column; }
+
+        #splashScreen {
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-dark);
+        }
+        .splash-content {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .splash-logo-container {
+            border-radius: 25px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .splash-logo {
+            width: 150px;
+            height: auto;
+            display: block;
+            border-radius: 15px;
+        }
+        .splash-loading {
+            font-size: 1.2rem;
+            color: #9CA3AF;
+            letter-spacing: 2px;
+        }
+        .splash-loading .dot {
+            animation: blink-dot 1.4s infinite;
+            opacity: 0;
+        }
+        .splash-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+        .splash-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink-dot { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://unpkg.com/@zxing/library@latest"></script>
 </head>
 <body>
-
-    <div id="pantallaPrincipal"></div>
+    
+    <div id="splashScreen" class="pantalla activa">
+        <div class="splash-content">
+             <div class="splash-logo-container">
+                 <img src="icon-512x512.png" alt="Logo de Recolección" class="splash-logo">
+             </div>
+             <p class="splash-loading">Cargando<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
+        </div>
+    </div>
+    
+    <div id="pantallaPrincipal" class="pantalla"></div>
     <div id="modalContainer"></div>
     <div id="scannerModal">
         <div class="scanner-frame-container">
@@ -345,8 +410,18 @@
         if (statusDiv) { statusDiv.textContent = message; statusDiv.className = `status-${type}`; }
     }
 
+    function activarPantalla(id){
+        document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+        const pantalla = document.getElementById(id);
+        if(pantalla) {
+            pantalla.style.display = 'flex';
+            pantalla.classList.add('activa');
+        }
+    }
+
     function mostrarPantallaInicio() {
-        document.getElementById("pantallaPrincipal").innerHTML = `<div class="card"><h2>Recolección de Tarimas</h2><p>Seleccione una opción para comenzar</p><button onclick="iniciarFlujo('recoleccion')" class="btn-primary">📦 Recolección</button><button onclick="iniciarFlujo('administracion')" class="btn-orange">⚙️ Administración</button><button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificación</button><div id="statusMessage" style="margin-top: 20px;"></div></div>`;
+        const contenedor = document.getElementById("pantallaPrincipal");
+        contenedor.innerHTML = `<div class="card"><h2>Recolección de Tarimas</h2><p>Seleccione una opción para comenzar</p><button onclick="iniciarFlujo('recoleccion')" class="btn-primary">📦 Recolección</button><button onclick="iniciarFlujo('administracion')" class="btn-orange">⚙️ Administración</button><button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificación</button><div id="statusMessage" style="margin-top: 20px;"></div></div>`;
     }
 
     function cerrarSesion() { empleadoActual = null; mostrarPantallaInicio(); }
@@ -507,7 +582,6 @@
     function mostrarFormularioTarima(id){document.getElementById("pantallaPrincipal").innerHTML=`<div class="card"><h3>Tarima: ${id}</h3><h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual||'Sin seleccionar'}</span></h4><div id="statusMessage"></div><input type="text" id="codigoCaja" placeholder="Escanear Cantidad o Código BX">${isMobile?`<button id="btnEscCaja" class="btn-primary">📷 Escanear</button>`:""}<h4>Resumen</h4><div id="resumenTarima" style="padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">Cajas: 0 | Piezas: 0</div><h4>Cajas Registradas</h4><ul id="listaCajas"></ul><button onclick="terminarRegistroTarima('${id}')" class="btn-orange">✅ Terminar</button><button onclick="cancelarCreacionTarima('${id}')" class="btn-danger">❌ Cancelar</button></div>`;updateStatus(`Escanee un código de cantidad (${appConfig.cantidadesPiezas}) para empezar.`,'info');if(isMobile)document.getElementById("btnEscCaja").addEventListener("click",()=>iniciarEscaneo("caja"));document.getElementById("codigoCaja").addEventListener("keypress",e=>{if(e.key==="Enter")procesarEscaneo(e.target.value.trim(),id)});actualizarResumenTarima(id)}
     function procesarEscaneo(v,id){const i=document.getElementById("codigoCaja"),c=appConfig.cantidadesPiezas.split(',').map(Number),p=parseInt(v);if(c.includes(p)){cantidadPiezasActual=p;document.getElementById("cantidadActual").textContent=p;updateStatus(`✅ Cantidad establecida a ${p}.`,'success');i.value="";return}if(!v.toUpperCase().startsWith('BX')){updateStatus("❌ El código debe empezar con 'BX'.",'error');i.value="";return}if(cantidadPiezasActual===null){updateStatus(`❌ Primero escanee la cantidad (${appConfig.cantidadesPiezas}).`,'error');i.value="";return}const b=v.trim();db.ref("tarimas").once("value").then(s=>{let e=!1,t=null;s.forEach(a=>{if(a.val().cajas&&Object.values(a.val().cajas).find(c=>c.codigoCaja===b)){e=!0;t=a.key}});if(e){updateStatus(`❌ BX ya agregado a la tarima: ${t}`,'error');i.value="";return}const d={codigoCaja:b,numeroOrden:b.substring(2,12),cantidadPiezas:cantidadPiezasActual,empleadoId:empleadoActual.id,turno:determinarTurno(),timestamp:new Date().toISOString()};db.ref(`tarimas/${id}/cajas`).push().set(d).then(()=>{updateStatus(`📦 Caja ${b} guardada.`,'success');actualizarResumenTarima(id)})});i.value=""}
     
-    // --- MODIFICADO: actualizarResumenTarima ahora muestra desglose de BX ---
     function actualizarResumenTarima(idTarima) {
         db.ref(`tarimas/${idTarima}/cajas`).once("value").then(snapshot => {
             const cajas = snapshot.val() || {};
