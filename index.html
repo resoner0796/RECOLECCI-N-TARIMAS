@@ -7,7 +7,7 @@
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#203a43">
-    <link rel="apple-touch-icon" href="icon-192x192.PNG">
+    <link rel="apple-touch-icon" href="icon-192x192.png">
 
     <style>
         /* Estilos Generales y de Fondo */
@@ -22,6 +22,18 @@
             min-height: 100vh;
             flex-direction: column;
             background-attachment: fixed;
+        }
+
+        .brand-title {
+            font-family: 'Times New Roman', Times, serif;
+            color: white;
+            font-size: clamp(28px, 3vw, 40px);
+            font-weight: normal;
+            text-align: center;
+            width: 100%;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            padding: 0;
         }
 
         /* Estilo Glassmorphism para la Tarjeta Principal */
@@ -271,12 +283,10 @@
             font-size: 0.9em;
         }
         
-        /* --- NUEVO: Estilos del Splash Screen --- */
         .pantalla {
           display: none;
           width: 100%;
           min-height: 100vh;
-          padding: 20px;
           transition: opacity 0.5s ease-out;
         }
         .pantalla.activa { display: flex; flex-direction: column; }
@@ -284,7 +294,6 @@
         #splashScreen {
             align-items: center;
             justify-content: center;
-            background-color: var(--bg-dark);
         }
         .splash-content {
             text-align: center;
@@ -332,7 +341,7 @@
     <div id="splashScreen" class="pantalla activa">
         <div class="splash-content">
              <div class="splash-logo-container">
-                 <img src="icon-512x512.512" alt="Logo de Recolección" class="splash-logo">
+                 <img src="icon-512x512.png" alt="Logo de Recolección" class="splash-logo">
              </div>
              <p class="splash-loading">Cargando<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
         </div>
@@ -421,7 +430,7 @@
 
     function mostrarPantallaInicio() {
         const contenedor = document.getElementById("pantallaPrincipal");
-        contenedor.innerHTML = `<div class="card"><h2>Recolección de Tarimas</h2><p>Seleccione una opción para comenzar</p><button onclick="iniciarFlujo('recoleccion')" class="btn-primary">📦 Recolección</button><button onclick="iniciarFlujo('administracion')" class="btn-orange">⚙️ Administración</button><button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificación</button><div id="statusMessage" style="margin-top: 20px;"></div></div>`;
+        contenedor.innerHTML = `<p class="brand-title">CORNING</p><div class="card"><h2>Recolección de Tarimas</h2><p>Seleccione una opción para comenzar</p><button onclick="iniciarFlujo('recoleccion')" class="btn-primary">📦 Recolección</button><button onclick="iniciarFlujo('administracion')" class="btn-orange">⚙️ Administración</button><button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificación</button><div id="statusMessage" style="margin-top: 20px;"></div></div>`;
     }
 
     function cerrarSesion() { empleadoActual = null; mostrarPantallaInicio(); }
@@ -461,7 +470,7 @@
     // --- SISTEMA DE ACCESO Y AUTENTICACIÓN ---
     function iniciarFlujo(flujo) {
         const titulos = { recoleccion: '📦 Recolección', administracion: '⚙️ Administración' };
-        document.getElementById("pantallaPrincipal").innerHTML = `<div class="card"><h2>${titulos[flujo]} - Iniciar Sesión</h2><p>Escanee su gafete para continuar.</p><div id="statusMessage"></div><input type="text" id="gafeteInput" placeholder="Escanear o ingresar gafete">${isMobile ? `<button id="btnEscGafete" class="btn-primary">📷 Escanear Gafete</button>` : ""}<button onclick="mostrarPantallaInicio()" class="btn-secondary">⬅️ Regresar</button></div>`;
+        document.getElementById("pantallaPrincipal").innerHTML = `<p class="brand-title">CORNING</p><div class="card"><h2>${titulos[flujo]} - Iniciar Sesión</h2><p>Escanee su gafete para continuar.</p><div id="statusMessage"></div><input type="text" id="gafeteInput" placeholder="Escanear o ingresar gafete">${isMobile ? `<button id="btnEscGafete" class="btn-primary">📷 Escanear Gafete</button>` : ""}<button onclick="mostrarPantallaInicio()" class="btn-secondary">⬅️ Regresar</button></div>`;
         updateStatus("Esperando escaneo de gafete...", 'info');
         const input = document.getElementById("gafeteInput");
         input.addEventListener("keypress", e => { if (e.key === "Enter") verificarAcceso(input.value.trim(), flujo); });
@@ -488,7 +497,7 @@
 
     // --- MÓDULO DE ADMINISTRACIÓN (Con Parámetros) ---
     function mostrarPantallaAdministracion() {
-        document.getElementById("pantallaPrincipal").innerHTML = `<div class="card" style="max-width: 700px;"><h2>⚙️ Administración</h2><div id="statusMessage"></div><h3>Gestión de Usuarios</h3><div style="text-align: left; margin-bottom: 10px;"><input type="text" id="adminGafeteInput" placeholder="Número de Gafete"><input type="text" id="adminNombreInput" placeholder="Nombre del Empleado"><select id="adminRolSelect"><option value="recolector">Recolector</option><option value="administrador">Administrador</option></select></div><button onclick="guardarUsuario()" class="btn-green">💾 Guardar Usuario</button><ul id="listaUsuarios" style="max-height: 200px; overflow-y: auto; margin-top:15px;"></ul><hr><h3>Parámetros del Sistema</h3><div style="text-align: left;"><label for="paramContrasena">Contraseña para Editar/Eliminar Tarimas:</label><input type="text" id="paramContrasena"><label for="paramCantidades">Cantidades de Piezas Válidas (separadas por coma):</label><input type="text" id="paramCantidades" placeholder="Ej: 1,5,6,12,24,34"></div><button onclick="guardarConfiguracion()" class="btn-primary">💾 Guardar Parámetros</button><hr><button onclick="cerrarSesion()" class="btn-danger">❌ Salir</button></div>`;
+        document.getElementById("pantallaPrincipal").innerHTML = `<p class="brand-title">CORNING</p><div class="card" style="max-width: 700px;"><h2>⚙️ Administración</h2><div id="statusMessage"></div><h3>Gestión de Usuarios</h3><div style="text-align: left; margin-bottom: 10px;"><input type="text" id="adminGafeteInput" placeholder="Número de Gafete"><input type="text" id="adminNombreInput" placeholder="Nombre del Empleado"><select id="adminRolSelect"><option value="recolector">Recolector</option><option value="administrador">Administrador</option></select></div><button onclick="guardarUsuario()" class="btn-green">💾 Guardar Usuario</button><ul id="listaUsuarios" style="max-height: 200px; overflow-y: auto; margin-top:15px;"></ul><hr><h3>Parámetros del Sistema</h3><div style="text-align: left;"><label for="paramContrasena">Contraseña para Editar/Eliminar Tarimas:</label><input type="text" id="paramContrasena"><label for="paramCantidades">Cantidades de Piezas Válidas (separadas por coma):</label><input type="text" id="paramCantidades" placeholder="Ej: 1,5,6,12,24,34"></div><button onclick="guardarConfiguracion()" class="btn-primary">💾 Guardar Parámetros</button><hr><button onclick="cerrarSesion()" class="btn-danger">❌ Salir</button></div>`;
         cargarUsuarios();
         cargarConfiguracion();
     }
@@ -557,7 +566,7 @@
     // --- MÓDULO DE RECOLECCIÓN ---
     function mostrarPantallaOpcionesRecoleccion() {
         const adminButtons = `<button onclick="mostrarReportesYAnalisis()" class="btn-secondary">📊 Reportes</button><button onclick="solicitarAccesoEdicion()" class="btn-secondary">📝 Editar Tarimas</button>`;
-        document.getElementById("pantallaPrincipal").innerHTML = `<div class="card"><h2>📦 Recolección</h2><h3>Bienvenido, <b>${empleadoActual.nombre}</b></h3><h4>Resumen del Turno (${determinarTurno()})</h4><div id="resumenTurno" style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b></div><button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button><button onclick="mostrarEdicionTarimasPropias()" class="btn-secondary">📋 Ver mis Tarimas</button>${empleadoActual.rol === 'administrador' ? adminButtons : ''}<button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button></div>`;
+        document.getElementById("pantallaPrincipal").innerHTML = `<p class="brand-title">CORNING</p><div class="card"><h2>📦 Recolección</h2><h3>Bienvenido, <b>${empleadoActual.nombre}</b></h3><h4>Resumen del Turno (${determinarTurno()})</h4><div id="resumenTurno" style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">Tarimas: <b id="tarimasRegistradas">0</b> | Cajas: <b id="cajasRegistradas">0</b></div><button onclick="crearNuevaTarima()" class="btn-green">📦 Crear Nueva Tarima</button><button onclick="mostrarEdicionTarimasPropias()" class="btn-secondary">📋 Ver mis Tarimas</button>${empleadoActual.rol === 'administrador' ? adminButtons : ''}<button onclick="cerrarSesion()" class="btn-danger">❌ Cerrar sesión</button></div>`;
         actualizarResumenTurno();
     }
     
@@ -579,7 +588,7 @@
     }
 
     function crearNuevaTarima() { db.ref("tarimas").orderByKey().limitToLast(1).once("value").then(s => { let n=1; if(s.exists()){const i=parseInt(Object.keys(s.val())[0].split('-')[1]);if(!isNaN(i))n=i+1} const id="TAR-"+String(n).padStart(3,'0'); currentTarima=id; cantidadPiezasActual=null; db.ref("tarimas/"+id).set({id,empleadoId:empleadoActual.id,fechaCreacion:new Date().toISOString(),turno:determinarTurno(),cajas:{},estado:'pendiente'}).then(()=>mostrarFormularioTarima(id))})}
-    function mostrarFormularioTarima(id){document.getElementById("pantallaPrincipal").innerHTML=`<div class="card"><h3>Tarima: ${id}</h3><h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual||'Sin seleccionar'}</span></h4><div id="statusMessage"></div><input type="text" id="codigoCaja" placeholder="Escanear Cantidad o Código BX">${isMobile?`<button id="btnEscCaja" class="btn-primary">📷 Escanear</button>`:""}<h4>Resumen</h4><div id="resumenTarima" style="padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">Cajas: 0 | Piezas: 0</div><h4>Cajas Registradas</h4><ul id="listaCajas"></ul><button onclick="terminarRegistroTarima('${id}')" class="btn-orange">✅ Terminar</button><button onclick="cancelarCreacionTarima('${id}')" class="btn-danger">❌ Cancelar</button></div>`;updateStatus(`Escanee un código de cantidad (${appConfig.cantidadesPiezas}) para empezar.`,'info');if(isMobile)document.getElementById("btnEscCaja").addEventListener("click",()=>iniciarEscaneo("caja"));document.getElementById("codigoCaja").addEventListener("keypress",e=>{if(e.key==="Enter")procesarEscaneo(e.target.value.trim(),id)});actualizarResumenTarima(id)}
+    function mostrarFormularioTarima(id){document.getElementById("pantallaPrincipal").innerHTML=`<p class="brand-title">CORNING</p><div class="card"><h3>Tarima: ${id}</h3><h4>Cantidad actual: <span id="cantidadActual">${cantidadPiezasActual||'Sin seleccionar'}</span></h4><div id="statusMessage"></div><input type="text" id="codigoCaja" placeholder="Escanear Cantidad o Código BX">${isMobile?`<button id="btnEscCaja" class="btn-primary">📷 Escanear</button>`:""}<h4>Resumen</h4><div id="resumenTarima" style="padding:10px;background:rgba(0,0,0,0.2);border-radius:8px;">Cajas: 0 | Piezas: 0</div><h4>Cajas Registradas</h4><ul id="listaCajas"></ul><button onclick="terminarRegistroTarima('${id}')" class="btn-orange">✅ Terminar</button><button onclick="cancelarCreacionTarima('${id}')" class="btn-danger">❌ Cancelar</button></div>`;updateStatus(`Escanee un código de cantidad (${appConfig.cantidadesPiezas}) para empezar.`,'info');if(isMobile)document.getElementById("btnEscCaja").addEventListener("click",()=>iniciarEscaneo("caja"));document.getElementById("codigoCaja").addEventListener("keypress",e=>{if(e.key==="Enter")procesarEscaneo(e.target.value.trim(),id)});actualizarResumenTarima(id)}
     function procesarEscaneo(v,id){const i=document.getElementById("codigoCaja"),c=appConfig.cantidadesPiezas.split(',').map(Number),p=parseInt(v);if(c.includes(p)){cantidadPiezasActual=p;document.getElementById("cantidadActual").textContent=p;updateStatus(`✅ Cantidad establecida a ${p}.`,'success');i.value="";return}if(!v.toUpperCase().startsWith('BX')){updateStatus("❌ El código debe empezar con 'BX'.",'error');i.value="";return}if(cantidadPiezasActual===null){updateStatus(`❌ Primero escanee la cantidad (${appConfig.cantidadesPiezas}).`,'error');i.value="";return}const b=v.trim();db.ref("tarimas").once("value").then(s=>{let e=!1,t=null;s.forEach(a=>{if(a.val().cajas&&Object.values(a.val().cajas).find(c=>c.codigoCaja===b)){e=!0;t=a.key}});if(e){updateStatus(`❌ BX ya agregado a la tarima: ${t}`,'error');i.value="";return}const d={codigoCaja:b,numeroOrden:b.substring(2,12),cantidadPiezas:cantidadPiezasActual,empleadoId:empleadoActual.id,turno:determinarTurno(),timestamp:new Date().toISOString()};db.ref(`tarimas/${id}/cajas`).push().set(d).then(()=>{updateStatus(`📦 Caja ${b} guardada.`,'success');actualizarResumenTarima(id)})});i.value=""}
     
     function actualizarResumenTarima(idTarima) {
@@ -656,12 +665,12 @@
     }
 
     function mostrarEdicionTarimasPropias() {
-        document.getElementById("pantallaPrincipal").innerHTML = `<div class="card"><h2>📝 Mis Tarimas Creadas</h2><p><small>Haz clic en una tarima para ver sus detalles.</small></p><button onclick="mostrarPantallaOpcionesRecoleccion()" class="btn-primary">⬅️ Regresar</button><div id="statusMessage"></div><ul id="listaEdicionTarimas"></ul></div>`;
+        document.getElementById("pantallaPrincipal").innerHTML = `<p class="brand-title">CORNING</p><div class="card"><h2>📝 Mis Tarimas Creadas</h2><p><small>Haz clic en una tarima para ver sus detalles.</small></p><button onclick="mostrarPantallaOpcionesRecoleccion()" class="btn-primary">⬅️ Regresar</button><div id="statusMessage"></div><ul id="listaEdicionTarimas"></ul></div>`;
         cargarListaEdicionTarimas(true);
     }
 
     function mostrarEdicionTarimasAdmin() {
-        document.getElementById("pantallaPrincipal").innerHTML = `<div class="card" style="max-width: 800px;"><h2>📝 Editar/Eliminar Todas las Tarimas</h2><p><small>Haz clic en una tarima para ver sus detalles.</small></p><button onclick="mostrarPantallaOpcionesRecoleccion()" class="btn-primary">⬅️ Regresar</button><div id="statusMessage"></div><ul id="listaEdicionTarimas"></ul></div>`;
+        document.getElementById("pantallaPrincipal").innerHTML = `<p class="brand-title">CORNING</p><div class="card" style="max-width: 800px;"><h2>📝 Editar/Eliminar Todas las Tarimas</h2><p><small>Haz clic en una tarima para ver sus detalles.</small></p><button onclick="mostrarPantallaOpcionesRecoleccion()" class="btn-primary">⬅️ Regresar</button><div id="statusMessage"></div><ul id="listaEdicionTarimas"></ul></div>`;
         cargarListaEdicionTarimas(false);
     }
     
@@ -756,10 +765,10 @@
         if (!tarimaEncontrada) { updateStatus("❌ Caja no encontrada.", 'error'); } 
         else { const logsSnapshot=await db.ref('historialLogs').once('value'); const logsPorTarima=clasificarLogsPorTarima(logsSnapshot.val()); mostrarInfoTarima(tarimaEncontrada, codigoCaja, logsPorTarima); }
     }
-    function mostrarInfoTarima(d,c,l){const h=Object.values(d.cajas||{}).map(a=>`<li ${a.codigoCaja===c?'style="background-color:rgba(0,122,255,0.5);"':''}>${a.codigoCaja}</li>`).join('');document.getElementById("pantallaPrincipal").innerHTML=`<div class="card"><h2>🔎 Información de Tarima</h2><h3>Tarima: <b>${d.id}</b></h3><p><b>Recolector:</b> ${d.empleadoId}</p>${determinarEstadoCompleto(d,l[d.id]||[])}<hr><h4>Cajas (${Object.keys(d.cajas||{}).length}):</h4><ul id="listaInfoCajas" style="max-height:200px;overflow-y:auto;">${h}</ul><div id="statusMessage"></div><button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificar otro BX</button><button onclick="mostrarPantallaInicio()" class="btn-primary">⬅️ Regresar</button></div>`;updateStatus(`Información para el BX: ${c}`,'info')}
-    function iniciarFlujoVerificacion(){document.getElementById("pantallaPrincipal").innerHTML=`<div class="card"><h2>🔎 Verificación de BX</h2><p>Escanee un código BX.</p><div id="statusMessage"></div><input type="text" id="verificacionInput" placeholder="Escanear BX-XXX">${isMobile?`<button id="btnEscVerificacion" class="btn-secondary">📷 Escanear</button>`:""}<button onclick="mostrarPantallaInicio()" class="btn-primary">⬅️ Regresar</button></div>`;updateStatus("Esperando escaneo...",'info');const i=document.getElementById("verificacionInput");i.addEventListener("keypress",e=>{if(e.key==="Enter")buscarYMostrarInfoBX(i.value.trim())});if(isMobile)document.getElementById("btnEscVerificacion").addEventListener("click",()=>iniciarEscaneo("verificacion"))}
+    function mostrarInfoTarima(d,c,l){const h=Object.values(d.cajas||{}).map(a=>`<li ${a.codigoCaja===c?'style="background-color:rgba(0,122,255,0.5);"':''}>${a.codigoCaja}</li>`).join('');document.getElementById("pantallaPrincipal").innerHTML=`<p class="brand-title">CORNING</p><div class="card"><h2>🔎 Información de Tarima</h2><h3>Tarima: <b>${d.id}</b></h3><p><b>Recolector:</b> ${d.empleadoId}</p>${determinarEstadoCompleto(d,l[d.id]||[])}<hr><h4>Cajas (${Object.keys(d.cajas||{}).length}):</h4><ul id="listaInfoCajas" style="max-height:200px;overflow-y:auto;">${h}</ul><div id="statusMessage"></div><button onclick="iniciarFlujoVerificacion()" class="btn-secondary">🔎 Verificar otro BX</button><button onclick="mostrarPantallaInicio()" class="btn-primary">⬅️ Regresar</button></div>`;updateStatus(`Información para el BX: ${c}`,'info')}
+    function iniciarFlujoVerificacion(){document.getElementById("pantallaPrincipal").innerHTML=`<p class="brand-title">CORNING</p><div class="card"><h2>🔎 Verificación de BX</h2><p>Escanee un código BX.</p><div id="statusMessage"></div><input type="text" id="verificacionInput" placeholder="Escanear BX-XXX">${isMobile?`<button id="btnEscVerificacion" class="btn-secondary">📷 Escanear</button>`:""}<button onclick="mostrarPantallaInicio()" class="btn-primary">⬅️ Regresar</button></div>`;updateStatus("Esperando escaneo...",'info');const i=document.getElementById("verificacionInput");i.addEventListener("keypress",e=>{if(e.key==="Enter")buscarYMostrarInfoBX(i.value.trim())});if(isMobile)document.getElementById("btnEscVerificacion").addEventListener("click",()=>iniciarEscaneo("verificacion"))}
 
-    function mostrarReportesYAnalisis(){const h=new Date().toISOString().slice(0,10);document.getElementById("pantallaPrincipal").innerHTML=`<div class="card" style="max-width:900px;"><h2>📊 Reportes</h2><p><small>Haz clic en una tarima para ver sus detalles.</small></p><div class="report-filters"><input type="date" id="filtroFechaInicio" value="${h}"><input type="date" id="filtroFechaFin" value="${h}"><input type="text" id="filtroEmpleado" placeholder="ID Empleado (opcional)"><select id="filtroEstado"><option value="todos">Todos los estados</option><option value="Pendiente de Calidad ⏳">Pendiente</option><option value="Liberada (Calidad) ✅">Liberada</option><option value="En Proceso (Producción) ⚙️">En Producción</option><option value="Recolectada (Logística) 🚛">Recolectada</option><option value="Rechazada (Calidad) ❌">Rechazada</option></select></div><button onclick="generarReporte()" class="btn-primary">🔍 Generar Reporte</button><button onclick="mostrarPantallaOpcionesRecoleccion()" class="btn-secondary">⬅️ Regresar</button><div id="statusMessage"></div><div id="reporteResultados" class="report-section"><hr><h4>Resultados</h4><div id="reporteResumen"></div><ul id="listaResultadosReporte"></ul></div></div>`}
+    function mostrarReportesYAnalisis(){const h=new Date().toISOString().slice(0,10);document.getElementById("pantallaPrincipal").innerHTML=`<p class="brand-title">CORNING</p><div class="card" style="max-width:900px;"><h2>📊 Reportes</h2><p><small>Haz clic en una tarima para ver sus detalles.</small></p><div class="report-filters"><input type="date" id="filtroFechaInicio" value="${h}"><input type="date" id="filtroFechaFin" value="${h}"><input type="text" id="filtroEmpleado" placeholder="ID Empleado (opcional)"><select id="filtroEstado"><option value="todos">Todos los estados</option><option value="Pendiente de Calidad ⏳">Pendiente</option><option value="Liberada (Calidad) ✅">Liberada</option><option value="En Proceso (Producción) ⚙️">En Producción</option><option value="Recolectada (Logística) 🚛">Recolectada</option><option value="Rechazada (Calidad) ❌">Rechazada</option></select></div><button onclick="generarReporte()" class="btn-primary">🔍 Generar Reporte</button><button onclick="mostrarPantallaOpcionesRecoleccion()" class="btn-secondary">⬅️ Regresar</button><div id="statusMessage"></div><div id="reporteResultados" class="report-section"><hr><h4>Resultados</h4><div id="reporteResumen"></div><ul id="listaResultadosReporte"></ul></div></div>`}
     async function generarReporte(){updateStatus("Generando reporte...",'info');const fI=document.getElementById("filtroFechaInicio").value,fF=document.getElementById("filtroFechaFin").value,eI=document.getElementById("filtroEmpleado").value.trim(),eF=document.getElementById("filtroEstado").value;const tS=await db.ref("tarimas").orderByChild('fechaCreacion').startAt(new Date(fI).toISOString()).endAt(new Date(fF+"T23:59:59").toISOString()).once("value"),lS=await db.ref('historialLogs').once('value'),lPT=clasificarLogsPorTarima(lS.val());let r=[];tS.forEach(t=>{const a=t.val();if(!a.id)return;const eC=determinarEstadoCompleto(a,lPT[a.id]||[]),eST=eC.match(/<b>Estado:<\/b> (.*?)<\/div>/)[1];const cF=(eI===''||a.empleadoId===eI)&&(eF==='todos'||eST===eF);if(cF)r.push({...a,estadoCompletoHTML:eC,estadoFiltro:eST})});mostrarResultadosReporte(r.reverse())}
     function mostrarResultadosReporte(r){const lR=document.getElementById("listaResultadosReporte"),rD=document.getElementById("reporteResumen");if(r.length===0){lR.innerHTML=`<li class="tarima-item">No se encontraron resultados.</li>`;rD.innerHTML='';updateStatus("Reporte generado. 0 resultados.",'info');return}let h="",tC=0,cE={};r.forEach(t=>{const n=t.cajas?Object.keys(t.cajas).length:0;tC+=n;cE[t.estadoFiltro]=(cE[t.estadoFiltro]||0)+1;const c=Object.values(t.cajas||{}).map(a=>`<li>${a.codigoCaja} (${a.cantidadPiezas} pz)</li>`).join('');h+=`<li class="tarima-item" onclick="toggleDetalles('detalles-reporte-${t.id}')"><div class="tarima-item-header-simple">Tarima: ${t.id}</div><div class="tarima-detalles-desplegables" id="detalles-reporte-${t.id}" style="display:none;"><p style="margin:0;"><b>Fecha:</b> ${formatoFechaHora(t.fechaCreacion)} | <b>Creada por:</b> ${t.empleadoId}</p>${t.estadoCompletoHTML}<div class="cajas-desplegables"><h4>Contenido (BX):</h4><ul>${c||'<li>No hay cajas.</li>'}</ul></div></div></li>`});let rH=Object.entries(cE).map(([e,c])=>`<div class="resumen-item">${e}: <b>${c}</b></div>`).join('');rD.innerHTML=`<p style="width:100%;text-align:center;"><b>Resultados: ${r.length} tarimas | ${tC} cajas</b></p>${rH}`;lR.innerHTML=h;updateStatus(`Reporte generado con ${r.length} resultados.`,'success')}
 
@@ -790,9 +799,29 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        mostrarPantallaInicio();
+        const splash = document.getElementById('splashScreen');
+        const main = document.getElementById('pantallaPrincipal');
+        
+        setTimeout(() => {
+            splash.style.opacity = '0';
+            splash.addEventListener('transitionend', () => {
+                splash.classList.remove('activa');
+                main.classList.add('activa');
+                mostrarPantallaInicio();
+            }, { once: true });
+        }, 2000);
+
         cargarConfiguracion();
         document.getElementById('closeScannerBtn').addEventListener('click', detenerCamara);
+
+        // REGISTRO DEL SERVICE WORKER PARA PWA
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("sw.js")
+                .then(reg => console.log("✅ Service Worker registrado:", reg.scope))
+                .catch(err => console.error("❌ Error registrando Service Worker:", err));
+            });
+        }
     });
 
 </script>
