@@ -9,9 +9,7 @@ const urlsToCache = [
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js',
   'https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js',
   'https://unpkg.com/@zxing/library@latest'
-  'icon-512x512.PNG'
-  'icon-192x192.PNG'
-  ];
+];
 
 // Evento 'install': se dispara cuando el Service Worker se instala
 self.addEventListener('install', event => {
