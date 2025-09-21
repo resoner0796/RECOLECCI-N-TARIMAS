@@ -1,21 +1,24 @@
 {
-  "name": "Recolección Tarimas",
-  "short_name": "Recoleccion",
-  "description": "Aplicación de Recolección de Tarimas",
-  "start_url": "./index.html",
+  "name": "Recolección de Tarimas",
+  "short_name": "Recolección",
+  "description": "Aplicación para la recolección y registro de tarimas.",
+  "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#0f2027",
+  "theme_color": "#203a43",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icono-192.PNG",
+      "src": "icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "icono-512.PNG",
+      "src": "icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
